@@ -44,7 +44,7 @@ create table users(
 	id int NOT NULL,
 	mailaddress VARCHAR(60) NOT NULL,
 	passwordhash VARCHAR(100) NOT NULL,
-	passwordsalt VARCHAR(50) NOT NULL,
+	passwordsalt VARCHAR(64) NOT NULL,
 	api varchar(100) NOT NULL,
 	isadmin boolean NOT NULL CHECK (isadmin IN (0, 1)),
 	isactive boolean NOT NULL CHECK (isactive IN (0, 1)),

@@ -94,7 +94,7 @@ class apiclass_acc {
 
         //Login User using the Password, the Salt and the Mailaddress
         {
-            let passwordhash = await auth_getpwhash(passwordsalt, logindata.password, logindata.mailaddress)
+            let passwordhash = await auth_getpwhash(passwordsalt, logindata.password)
             var user = await classdata.db.databasequerryhandler_secure(`select * from users where mailaddress = ? AND passwordhash = ? AND isactive = ?`, [logindata.mailaddress, passwordhash, true]);
             if (!user.length) {
                 return ({ "success": false, "msg": "Password or mailaddress wrong!" })
@@ -210,7 +210,7 @@ class apiclass_acc {
         let currenttime = addfunctions.unixtime_to_local()
 
         let randomsalt = auth_getrandomsalt();
-        let user = { "id": randomid, "sessionid": randomsessionid, "mailaddress": registerdata.mailaddress, "passwordsalt": randomsalt, "passwordhash": await auth_getpwhash(randomsalt, registerdata.password1, registerdata.mailaddress), "cookie": randomcookie, "api": randomapi, "ipv4": registerdata.useripv4, "ipv6": registerdata.useripv6, "isadmin": false, "isactive": true, "maxentries": classdata.db.routinedata.bubbledns_settings.standardmaxentries, "maxdomains": classdata.db.routinedata.bubbledns_settings.standardmaxdomains, "active_until": addfunctions.unixtime_to_local(new Date().valueOf() + 30 * 24 * 60 * 60 * 1000), "logintime": currenttime, "confirmedmail": false, "registrationdate": currenttime }
+        let user = { "id": randomid, "sessionid": randomsessionid, "mailaddress": registerdata.mailaddress, "passwordsalt": randomsalt, "passwordhash": await auth_getpwhash(randomsalt, registerdata.password1), "cookie": randomcookie, "api": randomapi, "ipv4": registerdata.useripv4, "ipv6": registerdata.useripv6, "isadmin": false, "isactive": true, "maxentries": classdata.db.routinedata.bubbledns_settings.standardmaxentries, "maxdomains": classdata.db.routinedata.bubbledns_settings.standardmaxdomains, "active_until": addfunctions.unixtime_to_local(new Date().valueOf() + 30 * 24 * 60 * 60 * 1000), "logintime": currenttime, "confirmedmail": false, "registrationdate": currenttime }
 
 
         var promise1 = classdata.db.databasequerryhandler_secure("INSERT INTO users values (?,?,?,?,?,?,?,?,?,?,?)", [user.id, user.mailaddress, user.passwordhash, user.passwordsalt, user.api, user.isadmin, user.isactive, user.maxentries, user.maxdomains, user.confirmedmail, user.registrationdate]);
@@ -296,7 +296,7 @@ class apiclass_acc {
             }
             var getsaltfromdb = await classdata.db.databasequerryhandler_secure(`select passwordsalt from users where id= ?`, [data.id]);
             if (getsaltfromdb.length) {
-                var databaseupdate = await classdata.db.databasequerryhandler_secure(`UPDATE users SET mailaddress = ?, passwordhash =?,isadmin = ?,confirmedmail = ?, isactive=?, maxentries =?, maxdomains =? where id= ?`, [data.mailaddress, await auth_getpwhash(getsaltfromdb[0].passwordsalt, data.password, data.mailaddress), data.isadmin, data.confirmedmail, data.isactive, data.maxentries, data.maxdomains, data.id]);
+                var databaseupdate = await classdata.db.databasequerryhandler_secure(`UPDATE users SET mailaddress = ?, passwordhash =?,isadmin = ?,confirmedmail = ?, isactive=?, maxentries =?, maxdomains =? where id= ?`, [data.mailaddress, await auth_getpwhash(getsaltfromdb[0].passwordsalt, data.password), data.isadmin, data.confirmedmail, data.isactive, data.maxentries, data.maxdomains, data.id]);
             }
             else {
                 return ({ "success": false, "msg": "Databaseupdate failed" })
@@ -321,21 +321,21 @@ class apiclass_acc {
 export { apiclass_acc }
 
 
-function auth_getpwhash(salt, password, mailaddress) {
-    let iterations = 10000;
+function auth_getpwhash(salt, password) {
+    let iterations = 100000;
     let keyLength = 49;
     let digest = "sha256"
 
 
     return new Promise((resolve, reject) => {
-        crypto.pbkdf2(password + mailaddress, salt, iterations, keyLength, digest, (err, derivedKey) => {
+        crypto.pbkdf2(password, salt, iterations, keyLength, digest, (err, derivedKey) => {
             if (err) return reject(err);
-            resolve(derivedKey.toString('hex'));
+                resolve(derivedKey.toString('hex'));
         });
     });
 }
 
-function auth_getrandomsalt(length = 16) {
+function auth_getrandomsalt(length = 32) {
     return crypto.randomBytes(length).toString('hex');
 }
 

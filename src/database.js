@@ -435,7 +435,6 @@ class mysqlclass {
         await this.routinemanger.addRoutine(6, routine_check_updates, 86400)
         this.log.addlog("Routine: routine_check_updates activated", { color: "green", warn: "Startup-Info", level: 3 })
 
-
         //Only Masternode
         if (classdata.db.routinedata.this_server?.masternode) {
 

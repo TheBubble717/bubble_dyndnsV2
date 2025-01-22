@@ -104,3 +104,4 @@ dist
 .tern-port
 desktop.ini
 debugconfig.json
+debugdb.sql

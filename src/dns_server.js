@@ -108,7 +108,6 @@ class dnsclass extends EventEmitter {
 
         });
 
-        
         Promise.all([udp4serverpromise,tcp4serverpromise])
         .then(async function(response){
             if (callback && typeof callback == 'function') {
@@ -122,8 +121,6 @@ class dnsclass extends EventEmitter {
             throw(err)
 
         })
-
-
     }
 
     async dnshandler(request, responseclass) {
