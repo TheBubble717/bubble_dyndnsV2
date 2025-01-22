@@ -25,8 +25,8 @@
     {
         "enable_ssl":true,
         "ssl":{
-            "cert":"/certs/server.crt",
-            "key":"/certs/server.key"
+            "cert":"/certs/web_server.crt",
+            "key":"/certs/web_server.key"
         },
         "hostname":"127.0.0.1",
         "debug":true,
@@ -45,5 +45,20 @@
         "debug":true,
         "screenLogLevel":1,
         "fileLogLevel":1
+    },
+    "tcpcomm":
+    {
+        "debug":true,
+        "debuglevel_display":1,
+        "debuglevel_file":1,
+        "port":19200,
+        "tls":
+        {
+            "client_cert":"/certs/tcp_client.crt",
+            "client_key":"/certs/tcp_client.key",
+            "server_cert":"/certs/tcp_server.crt",
+            "server_key":"/certs/tcp_server.key"
+        }
+
     }
 }

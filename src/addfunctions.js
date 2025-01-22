@@ -18,7 +18,6 @@ var addfunctions = {
         return result;
     },
 
-    
     randomapif: function () {
         var length = 95
         var result = '';
@@ -30,7 +29,6 @@ var addfunctions = {
         }
         return result;
     },
-
     
     randomcookief: function () {
         var length = 180
@@ -44,7 +42,6 @@ var addfunctions = {
         return result;
     },
 
-    
     unixtime_to_local: function (unixtimestamp) {
         if (unixtimestamp === undefined) {
             var date = new Date();
@@ -73,7 +70,6 @@ var addfunctions = {
         return year + month + day + "-" + hour + min + sec;
     },
 
-    
     current_time: function () {
         var date = new Date();
         var hour = date.getHours();
@@ -106,23 +102,19 @@ var addfunctions = {
 
     },
 
-    
     isIPv4: function (str) {
         return net.isIPv4(str);
     },
 
-    
     isIPv6: function (str) {
         return net.isIPv6(str);
     },
 
-    
     isDomain: function (str) {
         const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/;
         return domainRegex.test(str);
     },
 
-    
     isTLDomain: function (domain) {
         const mainDomainRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)\.[A-Za-z]{2,}$/;
         return mainDomainRegex.test(domain);
@@ -142,12 +134,10 @@ var addfunctions = {
 
     },
 
-    
     waittime: async function (s) {
         return new Promise(resolve => setTimeout(resolve, s * 1000));
     },
 
-    
     waittime_random: function (min, max) {
         return new Promise(resolve => {
             const delay = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -182,7 +172,6 @@ var addfunctions = {
         });
     },
 
-    
     check_for_correct_datatype(requiredFields, data, deleterest = true) {
         if (typeof data !== "object" || data === null) {
             return { "success": false, "msg": `Function received data not as object.` };
@@ -222,7 +211,6 @@ var addfunctions = {
         }
     },
 
-    
     check_dns_entry_validation: function(dnstype, dnsvalue) {
         switch (dnstype.toUpperCase()) {
             case 'A':
@@ -246,12 +234,10 @@ var addfunctions = {
         }
     },
 
-    
     objectconverter: function(obj) {
         return objectconverter_bubble_expressescape_library(obj)
     },
 
-    
     check_for_valid_user_entries: async function ({ mailaddress = null, password1 = null, password2 = null } = {}) {
 
             if (mailaddress !== null) {

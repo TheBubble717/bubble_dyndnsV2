@@ -65,6 +65,7 @@ class dnsclass extends EventEmitter {
 
         });
 
+        //TCP SERVER
         var tcp4serverpromise = new Promise(async (startupresolve, startupreject) => {
             try
             {

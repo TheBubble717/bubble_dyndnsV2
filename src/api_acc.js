@@ -22,7 +22,6 @@ class apiclass_acc {
         }
     }
 
-    
     async auth_api(apikey) //Login with the APIKEY, Returns the userclass
     {
         var result = await classdata.db.databasequerryhandler_secure(`select users.*,users_sessions.cookie from users INNER JOIN users_sessions ON users.id = users_sessions.userid where users.api = ? AND users.isactive = ? AND users.confirmedmail = ?`, [apikey, true, true])
@@ -33,7 +32,6 @@ class apiclass_acc {
         }
     }
 
-    
     async auth_isadmin_cookie(cookie)//Check if Cookie belongs to an admin, returns true(admin) or false
     {
         var that = this;
@@ -46,7 +44,6 @@ class apiclass_acc {
         }
     }
 
-    
     async auth_isadmin_api(apikey)//Check if Cookie belongs to an admin, returns true(admin) or false
     {
         var that = this;
@@ -59,7 +56,6 @@ class apiclass_acc {
         }
     }
 
-    
     async auth_login(logindata) //Login with mailaddress and Passwort, returns Cookie, API key and userid
     {
         var that = this;
@@ -144,7 +140,6 @@ class apiclass_acc {
 
     }
 
-    
     async auth_register(registerdata) //Returns Cookie, API key and userid
     {
         var that = this
@@ -226,7 +221,6 @@ class apiclass_acc {
 
     }
 
-    
     async get_user_full(usertoinspect)  //Returns all details of a specific user [0] = user_sessions, [1] = user_data(as userclass), [2] = domains_owner,[3] = domains_shared
     {
         //Check if everything that's needed in usertoinspect is set
@@ -266,7 +260,6 @@ class apiclass_acc {
         }
     }
 
-    
     async get_user_all()  //Returns all users as userclass
     {
         var users_array = await classdata.db.databasequerryhandler_secure(`select * from users`, [])
@@ -275,7 +268,6 @@ class apiclass_acc {
         return ({ "success": true, "data": users })
     }
 
-    
     async update_user(data) {
         var that = this;
 

@@ -120,7 +120,6 @@ class apiclass_dns {
         }
     }
 
-    
     async dnsentry_delete(user, dnsentry) {
         var that = this;
 
@@ -144,7 +143,6 @@ class apiclass_dns {
         }
     }
 
-    
     async dnsentry_list(user, dnsentry = null) {
         var that = this;
 
@@ -169,7 +167,6 @@ class apiclass_dns {
         }
     }
 
-    
     async dnsentry_create(user, dnsentry) {
         var that = this;
 
@@ -297,7 +294,6 @@ class apiclass_dns {
 
     }
 
-    
     async domain_list_owner(user, domain = null) //Domainnames the user is the owner of //If domainid is set, only query this specific domainid
     {
         var that = this;
@@ -340,7 +336,6 @@ class apiclass_dns {
 
     }
 
-    
     async domain_list_shared(user, domain = null) //Domainnames the user got share of
     {
         var that = this;
@@ -383,7 +378,6 @@ class apiclass_dns {
         }
     }
 
-    
     async domain_create(user, domain) {
         var that = this;
         {
@@ -458,7 +452,6 @@ class apiclass_dns {
 
     }
 
-    
     async domain_delete(user, domaintodelete) {
         var that = this;
 
@@ -481,7 +474,6 @@ class apiclass_dns {
         }
     }
 
-    
     async domain_verify(user, domaintoverify)  //Verify
     {
         var that = this;
@@ -577,7 +569,6 @@ class apiclass_dns {
 
     }
 
-    
     async domain_share_adduser(user, domainid, mailaddress) { //Add the mailaddress to the allowed list of the domain
         var that = this;
 
@@ -625,7 +616,6 @@ class apiclass_dns {
         return { "success": true, "data": "Done" }
     }
 
-    
     async domain_share_deleteuser(user, domainid, useridtodelete) {
         var that = this;
 
@@ -661,7 +651,6 @@ class apiclass_dns {
         }
     }
 
-    
     async dns_get_bubblednsservers() {
         var that = this;
         var dnsservers = {
@@ -681,7 +670,6 @@ class apiclass_dns {
         return ({ "success": true, "data": dnsservers })
     }
 
-    
     async dns_get_allowed_dnstype_entries() {
         return ({ "success": true, "data": { "bulitin": classdata.db.routinedata.bubbledns_settings.allowed_dnstype_entries_builtin, "custom": classdata.db.routinedata.bubbledns_settings.allowed_dnstype_entries_custom } })
 

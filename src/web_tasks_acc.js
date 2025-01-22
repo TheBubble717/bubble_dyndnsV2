@@ -36,7 +36,6 @@ var tasks =
         }
     },
 
-    
     "auth_login":
     {
         description: "Login on the site",
@@ -70,7 +69,6 @@ var tasks =
 
     },
 
-    
     "req_passwordreset":
     {
         description: "Request a Password Reset via Mailaddress",
@@ -109,7 +107,6 @@ var tasks =
     }
 }
 
-//Rewritten
 async function pretask(req, res, callback) {
 
         //Get ipv4-Address of the user.

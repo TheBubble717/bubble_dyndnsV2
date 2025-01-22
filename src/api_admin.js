@@ -17,7 +17,6 @@ class apiclass_admin {
 
     }
 
-    
     async dns_upstream_servers_enabledisable(dnsupstreamserver) {
         var that = this;
 
@@ -42,7 +41,6 @@ class apiclass_admin {
 
     }
 
-    
     async dns_upstream_servers_delete(dnsupstreamserver) {
         var that = this;
 
@@ -67,7 +65,6 @@ class apiclass_admin {
 
     }
 
-    
     async dns_upstream_servers_create(dnsupstreamserver) {
         var that = this;
 
@@ -108,14 +105,12 @@ class apiclass_admin {
 
     }
 
-    
     async bubbledns_servers_list() {
         var bubbledns_servers_from_db = await classdata.db.databasequerryhandler_secure("select * from bubbledns_servers", []);
         var bubbledns_servers_from_db_virtual = await classdata.db.databasequerryhandler_secure("select * from bubbledns_servers_virtual", []);
         return { success: true, data: [bubbledns_servers_from_db, bubbledns_servers_from_db_virtual] };
     }
 
-    
     async bubbledns_servers_synctest(bubblednsservertotest) {
         var that = this;
 
@@ -184,7 +179,6 @@ class apiclass_admin {
         }
     }
 
-    
     async bubbledns_servers_create(bubblednsserver) {
         var that = this;
 
@@ -291,7 +285,6 @@ class apiclass_admin {
         }
     }
 
-    
     async bubbledns_servers_update(bubblednsserver) {
         var that = this;
 
@@ -394,7 +387,6 @@ class apiclass_admin {
         }
     }
 
-    
     async bubbledns_servers_delete(bubblednsserver) {
         var that = this;
 

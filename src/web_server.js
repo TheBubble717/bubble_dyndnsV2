@@ -49,7 +49,6 @@ class webclass extends EventEmitter {
                     }
                     return;
                 });
-
             }
             else {
 
@@ -357,8 +356,6 @@ class webclass extends EventEmitter {
 
 }
 
-// {success:true, data:--data- ,}
-// {success:false, msg:--data- ,}
 class api_responseclass {
     constructor(req, res) {
         this.req = req,

@@ -33,7 +33,6 @@ var tasks =
 
     },
 
-    
     "dnsentry_delete":
     {
         description: "Delete a DNS Entry of the Domain",
@@ -61,7 +60,6 @@ var tasks =
         }
     },
 
-    
     "dnsentry_create":
     {
         description: "Create a DNS Entry of the Domain",
@@ -90,7 +88,6 @@ var tasks =
 
     },
 
-    
     "domain_list_owner":
     {
         description: "Get all Domains the user ownes (also the dnsentries and sharelist)",
@@ -112,7 +109,6 @@ var tasks =
         }
     },
 
-    
     "domain_list_shared":
     {
         description: "Get all Domains the user got shared (also the dnsentries and empty sharelist)",
@@ -134,7 +130,6 @@ var tasks =
         }
     },
 
-    
     "domain_create":
     {
         description: "Create a new Domain",
@@ -171,7 +166,6 @@ var tasks =
 
     },
 
-    
     "domain_delete":
     {
         description: "Delete a Domain",
@@ -200,7 +194,6 @@ var tasks =
 
     },
 
-    
     "domain_verify":
     {
         description: "Verify a Domain",
@@ -236,7 +229,6 @@ var tasks =
 
     },
 
-    
     "domain_share_adduser":
     {
         description: "Share a Domain with a User",
@@ -281,7 +273,6 @@ var tasks =
 
     },
 
-    
     "domain_share_deleteuser":
     {
         description: "Delete your Domain share of a specific user (deleting all of his dnsentries too)",
@@ -325,7 +316,6 @@ var tasks =
         }
     },
 
-    
     "dns_get_bubblednsservers":
     {
         description: "Get the BubbleDNS-Servers",
@@ -347,7 +337,6 @@ var tasks =
         }
     },
 
-    
     "dns_get_allowed_dnstype_entries":
     {
         description: "dns_get_allowed_dnstype_entries",
@@ -368,7 +357,6 @@ var tasks =
             });
         }
     },
-
 }
 
 

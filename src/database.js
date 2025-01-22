@@ -25,7 +25,6 @@ class mysqlclass {
         this.routinemanger = new RoutineManager()
     }
 
-    //Rewritten+
     async connect(callback) {
         var that = this
         try {
@@ -56,7 +55,6 @@ class mysqlclass {
 
     }
 
-    //Rewritten+
     async databasequerryhandler_unsecure(querry, callback) {
         var that = this;
 
@@ -87,7 +85,6 @@ class mysqlclass {
 
     }
 
-    //Rewritten+
     async databasequerryhandler_secure(query, values, callback) {
         const that = this;
 
@@ -228,9 +225,6 @@ class mysqlclass {
         });
     }
 
-
-
-    //Rewritten+
     async enable_routines() {
         var that = this;
 

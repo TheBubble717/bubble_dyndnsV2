@@ -5,6 +5,7 @@ import { mainlog, logclass } from "bubble_log_library"
 import { mysqlclass } from "./database.js"
 import { dnsclass } from "./dns_server.js"
 import { webclass } from "./web_server.js"
+import { tcpcommuicationclass } from "./tcp_communication.js"
 import { mailclass } from "./mail_client.js"
 import { tasks as web_tasks_admin } from "./web_tasks_admin.js"
 import { tasks as web_tasks_dns } from "./web_tasks_dns.js"
@@ -15,7 +16,7 @@ import { apiclass_admin } from "./api_admin.js"
 import { userclass } from "./classes.js"
 
 var log = mainlog({ screenLogLevel: 1, addcallerlocation: true })
-var alllogs = {"mainlog":log}
+var alllogs = { "mainlog": log }
 errorhandling()
 
 var classdata = {}
@@ -44,7 +45,7 @@ async function bubbledns() {
     log.addlog("Activating Mysql-Connection", { color: "green", warn: "Startup-Info", level: 3 })
     alllogs.dblog = new logclass({ screenLogLevel: config.mysql.screenLogLevel, fileLogLevel: config.mysql.fileLogLevel, addcallerlocation: config.mysql.debug })
     await alllogs.dblog.activatestream("log/", addfunctions.unixtime_to_local() + " - Database.log")
-    classdata.db = new mysqlclass({ ...config.mysql, public_ip: config.public_ip }, alllogs.dblog,packageJson)
+    classdata.db = new mysqlclass({ ...config.mysql, public_ip: config.public_ip }, alllogs.dblog, packageJson)
     await classdata.db.connect(async function (err, res) {
         if (err) {
             log.addlog(err, { color: "red", warn: "Startup-Error", level: 3 });
@@ -76,6 +77,23 @@ async function bubbledns() {
     }
 
     if (classdata.db.routinedata.this_server) {
+
+        //Activate TCP-Communication
+        log.addlog("Activating TCP-Connection", { color: "green", warn: "Startup-Info", level: 3 })
+        alllogs.tcpcomlog = new logclass({ screenLogLevel: config.tcpcomm.screenLogLevel, fileLogLevel: config.tcpcomm.fileLogLevel, addcallerlocation: config.tcpcomm.debug })
+        await alllogs.tcpcomlog.activatestream("log/", addfunctions.unixtime_to_local() + " - TCP_com.log")
+        classdata.tcpcom = new tcpcommuicationclass(config.tcpcomm, alllogs.tcpcomlog)
+        await classdata.tcpcom.create_connection()
+            .then(function (res) {
+                log.addlog(res, { color: "green", warn: "Startup-Info", level: 3 })
+            })
+            .catch(function (err) {
+                log.addlog(err, { color: "red", warn: "Startup-Error", level: 3 });
+                process.exit(1013)
+            })
+
+
+
         //Activate DNS-Server (Gets always activated if databseentry of it exists, even if it is not used; It doesn't get registered as nameservers; Needed for Synctest)
         log.addlog("Activating DNS-Server", { color: "green", warn: "Startup-Info", level: 3 })
         alllogs.dnslog = new logclass({ screenLogLevel: config.dnsserver.screenLogLevel, fileLogLevel: config.dnsserver.fileLogLevel, addcallerlocation: config.dnsserver.debug })
@@ -144,7 +162,7 @@ async function bubbledns() {
             "ipv4": function () { if (addfunctions.isIPv4(config.public_ip)) { return config.public_ip } else { return null } }(),
             "ipv6": function () { if (addfunctions.isIPv6(config.public_ip)) { return config.public_ip } else { return null } }()
         }
-        let addingbubblednsserver = await classdata.api.admin.bubbledns_servers_create({ "subdomainname": "ns1", "enabled_dns": 1, "enabled_web": 1, "public_ipv4": ip.ipv4, "public_ipv6": ip.ipv6, "internal_ipv4": null, "internal_ipv6": null, "masternode": 1,"virtual":false },)
+        let addingbubblednsserver = await classdata.api.admin.bubbledns_servers_create({ "subdomainname": "ns1", "enabled_dns": 1, "enabled_web": 1, "public_ipv4": ip.ipv4, "public_ipv6": ip.ipv6, "internal_ipv4": null, "internal_ipv6": null, "masternode": 1, "virtual": false },)
         if (!addingbubblednsserver.success) {
             let err = `Error creating BubbleDNS_Server: ${addingbubblednsserver.msg}`
             log.addlog(err, { color: "red", warn: "FirstStartup", level: 3 })
@@ -195,13 +213,13 @@ async function bubbledns() {
 
 }
 
-async function errorhandling(){
+async function errorhandling() {
     let isShuttingDown = false;
 
     async function gracefulStop() {
-        if (isShuttingDown) return; 
+        if (isShuttingDown) return;
         isShuttingDown = true;
-    
+
         console.log("Performing graceful shutdown...");
         try {
             let logstoshutdown = Object.values(alllogs)
@@ -214,23 +232,23 @@ async function errorhandling(){
         }
         process.exit(1);
     }
-    
+
     // Handle uncaught exceptions
     process.on('uncaughtException', async (error) => {
         console.error("Uncaught exception:", error);
         await gracefulStop();
     });
-    
+
     // Handle unhandled promise rejections
     process.on('unhandledRejection', async (reason, promise) => {
         log.addlog(reason.stack || "Unknown reason", { color: "red", warn: "Crash", level: 99 });
         await gracefulStop();
     });
-    
+
     // Handle system signals for graceful shutdown
     process.on('SIGINT', gracefulStop);
     process.on('SIGTERM', gracefulStop);
-    
+
     // Handle process exit
     process.on('exit', (exitCode) => {
         log.addlog(`Program exiting with error code ${exitCode}`, { color: "red", warn: "Crash", level: 99 });
