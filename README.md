@@ -136,12 +136,17 @@ Don't add multiple Mailservers, only the first one will be used.
 
 
 ## Multiple Servers
-BubbleDNS `debug` supports multiple servers with linked databases. <br />
-On my running server `bubbledns.com`, I use a Master-Slave Replication. In this setup, the other servers need to have the variable `masternode`=0 <br />
-If you have set up a master-master Replication, you need to set `masternode`=1. In this case the DNS Resolve of `A` at `maindomain` will have both servers in it.
+BubbleDNS supports multiple servers with linked databases. <br />
 
-Master-Slave-Installation
+### Classic Master-Slave
+In this setup, the other servers need to have the variable `masternode`=0 <br />
 Great tutorial under: https://mariadb.com/kb/en/setting-up-replication/
+
+
+### Modern Master-Master-Connection using 
+In this setup, the other servers need to have the variable `masternode`=1 <br />
+Great tutorial under: https://www.ionos.at/digitalguide/hosting/hosting-technik/galera-cluster-mariadb-auf-ubuntu-2004/ (German website)
+
 
 ## Final Words
 The Front-End is a little bit of a mess and requires a complete overhaul. It takes time to create new features and kill (hopefully) all the bugs.<br /> 
