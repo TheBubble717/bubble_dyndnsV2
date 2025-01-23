@@ -1,5 +1,6 @@
 -- Complete Remake of the Front-End
 -- Implementation of a TCP Client and Server!
+----- Communication with all the servers and doing a synctest together -> Over 50% say offline -> synctest =0 and other way around
 
 Problems
 ---mx records no priority possible

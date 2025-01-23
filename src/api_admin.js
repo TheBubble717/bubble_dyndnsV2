@@ -130,6 +130,12 @@ class apiclass_admin {
             return ({ "success": false, "msg": `Unable to test, Cluster NOT OK: ${classdata.db.routinedata.cluster_status.msg}` })
         }
 
+        //Only allow Synctest if Server itself has Synctest=1
+        if(!classdata.db.routinedata.this_server.synctest)
+            {
+                return ({ "success": false, "msg": `Server with Synctest=0 can't test another Server for Synctest` })
+            }
+
         //Search BubbleDNS_SERVER
         var bubblednsserver = classdata.db.routinedata.bubbledns_servers.filter(r => r.id == bubblednsservertotest.id)[0]
         if (typeof bubblednsserver == "undefined") {
@@ -154,7 +160,8 @@ class apiclass_admin {
 
         //Create a random bubbledns_testvalue and check if the other bubbledns server returns it
         {
-            await classdata.db.databasequerryhandler_secure("insert into bubbledns_servers_testvalues values (?);", [testdata])
+            //Testvalue expires in one hour
+            await classdata.db.databasequerryhandler_secure("insert into bubbledns_servers_testvalues values (?,?,?);", [testdata,addfunctions.unixtime_to_local(new Date().valueOf() + 1 * 60 * 60 * 1000),bubblednsservertotest.id])
             await addfunctions.waittime(3);
             var requesteddnsentry = await classdata.dnsserver.askrealdns_customserver("synctest", "TXT", function () { if (bubblednsserver.public_ipv4 != null) { return bubblednsserver.public_ipv4 } else { return bubblednsserver.public_ipv6 } }())
                 .then(function (data) {
@@ -173,7 +180,7 @@ class apiclass_admin {
 
 
         var promise1 = classdata.db.databasequerryhandler_secure(`UPDATE bubbledns_servers set synctest =? where id = ? `, [synctestresult, bubblednsservertotest.id]);
-        var promise2 = classdata.db.databasequerryhandler_secure(`DELETE from bubbledns_servers_testvalues where testvalue = ?`, [testdata]);
+        var promise2 = classdata.db.databasequerryhandler_secure(`DELETE from bubbledns_servers_testvalues where testvalue = ? AND testedid = ?`, [testdata,bubblednsservertotest.id]);
         const databaseupdate = await Promise.all([promise1, promise2])
         if (synctestresult) {
             return ({ "success": true, "data": "Done" })

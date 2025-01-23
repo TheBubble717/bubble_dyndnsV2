@@ -5,7 +5,7 @@ import { mainlog, logclass } from "bubble_log_library"
 import { mysqlclass } from "./database.js"
 import { dnsclass } from "./dns_server.js"
 import { webclass } from "./web_server.js"
-import { tcpcommuicationclass } from "./tcp_communication.js"
+//import { tcpcommuicationclass } from "./tcp_communication.js"
 import { mailclass } from "./mail_client.js"
 import { tasks as web_tasks_admin } from "./web_tasks_admin.js"
 import { tasks as web_tasks_dns } from "./web_tasks_dns.js"
@@ -46,21 +46,21 @@ async function bubbledns() {
     alllogs.dblog = new logclass({ screenLogLevel: config.mysql.screenLogLevel, fileLogLevel: config.mysql.fileLogLevel, addcallerlocation: config.mysql.debug })
     await alllogs.dblog.activatestream("log/", addfunctions.unixtime_to_local() + " - Database.log")
     classdata.db = new mysqlclass({ ...config.mysql, public_ip: config.public_ip }, alllogs.dblog, packageJson)
-    await classdata.db.connect(async function (err, res) {
-        if (err) {
-            log.addlog(err, { color: "red", warn: "Startup-Error", level: 3 });
-            process.exit(1011)
-        }
-        log.addlog(res, { color: "green", warn: "Startup-Info", level: 3 })
-
-    });
+    await classdata.db.connect()
+    .then(function(res){log.addlog(res, { color: "green", warn: "Startup-Info", level: 3 })})
+    .catch(function(err){
+        log.addlog(err, { color: "red", warn: "Startup-Error", level: 3 });
+        process.exit(1011)
+    })
     await classdata.db.enable_routines()
+
 
     //Activate Mailservice
     log.addlog("Activating Mailserver-Connection", { color: "green", warn: "Startup-Info", level: 3 })
     alllogs.maillog = new logclass({ screenLogLevel: config.mailclient.screenLogLevel, fileLogLevel: config.mailclient.fileLogLevel, addcallerlocation: config.mailclient.debug })
     await alllogs.maillog.activatestream("log/", addfunctions.unixtime_to_local() + " - Mail_Client.log")
     classdata.mail = new mailclass(config.mailclient, alllogs.maillog)
+
 
     //Activate API & Tasks
     alllogs.apilog = new logclass({ screenLogLevel: config.api.screenLogLevel, fileLogLevel: config.api.fileLogLevel, addcallerlocation: config.api.debug })
@@ -78,6 +78,7 @@ async function bubbledns() {
 
     if (classdata.db.routinedata.this_server) {
 
+        /*
         //Activate TCP-Communication
         log.addlog("Activating TCP-Connection", { color: "green", warn: "Startup-Info", level: 3 })
         alllogs.tcpcomlog = new logclass({ screenLogLevel: config.tcpcomm.screenLogLevel, fileLogLevel: config.tcpcomm.fileLogLevel, addcallerlocation: config.tcpcomm.debug })
@@ -91,6 +92,7 @@ async function bubbledns() {
                 log.addlog(err, { color: "red", warn: "Startup-Error", level: 3 });
                 process.exit(1013)
             })
+        */
 
         //Activate DNS-Server (Gets always activated if databseentry of it exists, even if it is not used; It doesn't get registered as nameservers; Needed for Synctest)
         log.addlog("Activating DNS-Server", { color: "green", warn: "Startup-Info", level: 3 })
@@ -259,6 +261,7 @@ async function errorhandling() {
         await gracefulStop();
     });
 
+    
     // Handle unhandled promise rejections
     process.on('unhandledRejection', async (reason, promise) => {
         log.addlog(reason.stack || "Unknown reason", { color: "red", warn: "Crash", level: 99 });

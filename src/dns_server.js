@@ -160,7 +160,7 @@ class dnsclass extends EventEmitter {
             //SYNCTEST
             if (question.name.toLowerCase() == "synctest" && question.type == "TXT") {
 
-                let synctestdata = await classdata.db.databasequerryhandler_secure("select * from bubbledns_servers_testvalues", [])
+                let synctestdata = await classdata.db.databasequerryhandler_secure("select * from bubbledns_servers_testvalues where testedid=?", [classdata.db.routinedata.this_server.id])
                 response = { "type": question.type, "data": synctestdata.map(function (r) { return r.testvalue }), "server": "SELFANSWER", "dnsflags": dnsPacket.AUTHORITATIVE_ANSWER }
             }
 

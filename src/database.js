@@ -26,8 +26,42 @@ class mysqlclass {
         this.routinemanger = new RoutineManager()
     }
 
-    async connect(callback) {
+    async connect() {
         var that = this
+
+        ///Need a better solution than copying the function
+        var check_cluster = async function () {
+
+            let ispartofcluster = await classdata.db.databasequerryhandler_secure(`SHOW VARIABLES LIKE 'wsrep_on';`, [])
+            if (ispartofcluster[0].Value == "ON") {
+
+                //Check myself, if I am in the cluster right now!
+                {
+                    let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_cluster_status';`, [])
+                    if (testvalue[0].Value != "Primary") {
+                        that.routinedata.cluster_status = { "status": false, "clustertype": 1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
+                        that.log.addlog(`Cluster Error: ${that.routinedata.cluster_status.err}`, { color: "red", warn: "Startup-Error", level: 3 })
+                        return false;
+                    }
+                }
+
+                //Check myself, if I am in sync with the cluster right now!
+                {
+                    let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_local_state_comment';`, [])
+                    if (testvalue[0].Value != "Synced") {
+                        that.routinedata.cluster_status = { "status": false, "clustertype": 1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
+                        that.log.addlog(`Cluster Error: ${that.routinedata.cluster_status.err}`, { color: "red", warn: "Startup-Error", level: 3 })
+                        return false;
+                    }
+                }
+                return true;
+            }
+            //No Cluster -> Always OK //// cluster_status.clustertype=0 -> NO CLUSTER , cluster_status.clustertype=1 -> Working Cluster
+            else {
+                return true;
+            }
+        }
+
         try {
             that.pool = mysql.createPool(that.config.connectiondata);
             await new Promise((resolve, reject) => {
@@ -39,17 +73,23 @@ class mysqlclass {
                 });
             });
 
-            let answer = `Successfully connected to Mysql-Database`
-            if (callback && typeof callback == 'function') {
-                await callback("", answer);
+            var clusterstatus = false
+            do
+            {
+                clusterstatus = await check_cluster()
+                if(!clusterstatus)
+                {
+                    await addfunctions.waittime(5)
+                }
+                
             }
+            while(!clusterstatus)
+
+            let answer = `Successfully connected to Mysql-Database`
             return (answer);
 
         } catch (err) {
             const error = `Error connecting to database! Message: ${err}`
-            if (callback && typeof callback === 'function') {
-                await callback(error, null);
-            }
             throw new Error(error);
         }
 
@@ -225,11 +265,47 @@ class mysqlclass {
 
         var once_startup_masternode = async function () {
             try {
-                var deletiondatabase = await that.databasequerryhandler_secure("delete from bubbledns_servers_testvalues");
+                //Delete old expired testvalues
+                var test = await that.databasequerryhandler_secure("delete from bubbledns_servers_testvalues where expirationtime <=?",[addfunctions.unixtime_to_local(new Date().valueOf())]);
             }
             catch (err) {
                 that.log.addlog("Error deleting old testvalues", { color: "red", warn: "Startup-Error", level: 3 })
                 process.exit(1000)
+            }
+        }
+
+        var routine_check_cluster_status = async function () {
+
+            let ispartofcluster = await classdata.db.databasequerryhandler_secure(`SHOW VARIABLES LIKE 'wsrep_on';`, [])
+            if (ispartofcluster[0].Value == "ON") {
+
+                //Check myself, if I am in the cluster right now!
+                {
+                    let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_cluster_status';`, [])
+                    if (testvalue[0].Value != "Primary") {
+                        that.routinedata.cluster_status = { "status": false, "clustertype": 1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
+                        that.log.addlog(`Cluster Error: ${that.routinedata.cluster_status.err}`, { color: "red", warn: "Startup-Error", level: 3 })
+                        process.exit(1023)
+                    }
+                }
+
+                //Check myself, if I am in sync with the cluster right now!
+                {
+                    let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_local_state_comment';`, [])
+                    if (testvalue[0].Value != "Synced") {
+                        that.routinedata.cluster_status = { "status": false, "clustertype": 1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
+                        that.log.addlog(`Cluster Error: ${that.routinedata.cluster_status.err}`, { color: "red", warn: "Startup-Error", level: 3 })
+                        process.exit(1024)
+                    }
+                }
+
+                that.routinedata.cluster_status = { "status": true, "clustertype": 1 , "err":""}
+                return;
+            }
+            //No Cluster -> Always OK //// cluster_status.clustertype=0 -> NO CLUSTER , cluster_status.clustertype=1 -> Working Cluster
+            else {
+                that.routinedata.cluster_status = { "status": true, "clustertype": 0 , "err":""}
+                return;
             }
         }
 
@@ -332,6 +408,10 @@ class mysqlclass {
                 return new Promise(async (resolve, reject) => {
                     resolve() //Don't wait for test to finish
                     await addfunctions.waittime(20); //Wait for the whole server to be initialized
+
+                    //Only Synctest if the server self as Synctest =1
+                    if(!that.routinedata.this_server.synctest){return}
+
                     for (let i = 0; i < that.routinedata.bubbledns_servers.length; i++) {
 
                         //Don't test the yourself (to test IPV4 == this server) & Don't test virtual servers
@@ -425,103 +505,12 @@ class mysqlclass {
             });
         }
 
-        var routine_check_cluster_status = async function () {
-
-            let update_routines_data = { "type": "clusterupdate", "data": that.routinedata.cluster_status }
-            let ispartofcluster = await classdata.db.databasequerryhandler_secure(`SHOW VARIABLES LIKE 'wsrep_on';`, [])
-            if (ispartofcluster[0].Value == "ON") {
-
-                //Check myself, if I am in the cluster right now!
-                {
-                    let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_cluster_status';`, [])
-                    if (testvalue[0].Value != "Primary") {
-                        that.routinedata.cluster_status = { "status": false, "clustertype":1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
-
-                        internal_routine_updater(update_routines_data)
-                        return;
-                    }
-                }
-
-                //Check myself, if I am in sync with the cluster right now!
-                {
-                    let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_local_state_comment';`, [])
-                    if (testvalue[0].Value != "Synced") {
-                        that.routinedata.cluster_status = { "status": false, "clustertype":1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
-                        internal_routine_updater(update_routines_data)
-                        return;
-                    }
-                }
-                
-
-                that.routinedata.cluster_status = { "status": true, "clustertype":1 }
-                internal_routine_updater(update_routines_data)
-                return;
-            }
-            //No Cluster -> Always OK //// cluster_status.clustertype=0 -> NO CLUSTER , cluster_status.clustertype=1 -> Working Cluster
-            else {
-                that.routinedata.cluster_status = { "status": true, "clustertype":0 }
-                internal_routine_updater(update_routines_data)
-                return;
-            }
-        }
-
-        //NOT A ROUTINE, normal function!!!
-        var internal_routine_updater = async function (prevousdata) {
-            if (prevousdata.type == 'clusterupdate') {
-                //Cluster went from non-working to working -> Disable Fetching Data from Database
-                if ((that.routinedata.cluster_status.clustertype == 1) && (prevousdata.data !== null) && (prevousdata.data?.status == true) && (that.routinedata.cluster_status.status == false)) {
-                    that.log.addlog(`Cluster offline! Reason: ${that.routinedata.cluster_status.err}` , { color: "red", warn: "Cluster-Error", level: 3 })
-
-                    that.routinemanger.removeRoutine(1).catch((err) => { console.log(err) })
-                    that.log.addlog("Routine: Fetch_Domains disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
-                    that.routinemanger.removeRoutine(2).catch((err) => { console.log(err) })
-                    that.log.addlog("Routine: Fetch_Bubbledns_settings disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
-                    that.routinemanger.removeRoutine(3).catch((err) => { console.log(err) })
-                    that.log.addlog("Routine: Fetch_Bubbledns_servers disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
-                    that.routinemanger.removeRoutine(4).catch((err) => { console.log(err) })
-                    that.log.addlog("Routine: Fetch_mailserver_settings disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
-
-                    if (classdata.db.routinedata.this_server?.masternode) {
-                        that.routinemanger.removeRoutine(8).catch((err) => { console.log(err) })
-                        that.log.addlog("Routine: Synctest from Masternode to Slaves/Masters disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
-                    }
-                }
-
-                //Cluster went from working to non-working -> Re-Enable Fetching Data from Database
-                else if ((that.routinedata.cluster_status.clustertype == 1) && (prevousdata.data !== null) && (prevousdata.data?.status == false) && (that.routinedata.cluster_status.status == true)) {
-                    
-
-                    that.routinemanger.addRoutine(1, routine_fetch_domains, 30).catch((err) => { console.log(err) })
-                    that.log.addlog("Routine: Fetch_Domains enabled", { color: "green", warn: "Routine-Info", level: 3 })
-                    that.routinemanger.addRoutine(2, routine_fetch_bubbledns_settings, 30).catch((err) => { console.log(err) })
-                    that.log.addlog("Routine: Fetch_Bubbledns_settings enabled", { color: "green", warn: "Routine-Info", level: 3 })
-                    that.routinemanger.addRoutine(3, routine_fetch_bubbledns_servers, 30).catch((err) => { console.log(err) })
-                    that.log.addlog("Routine: Fetch_Bubbledns_servers enabled", { color: "green", warn: "Routine-Info", level: 3 })
-                    that.routinemanger.addRoutine(4, routine_fetch_mailserver_settings, 30).catch((err) => { console.log(err) })
-                    that.log.addlog("Routine: Fetch_mailserver_settings enabled", { color: "green", warn: "Routine-Info", level: 3 })
-
-                    if (classdata.db.routinedata.this_server?.masternode) {
-
-                        await that.routinemanger.addRoutine(8, routine_synctest_bubbledns_servers, 180).catch((err) => { console.log(err) })
-                        that.log.addlog("Routine: Synctest from Masternode to Slaves/Masters enabled", { color: "green", warn: "Routine-Info", level: 3 })
-                    }
-
-                    //Additonally set Synctest=0
-                    classdata.db.routinedata.this_server.synctest =0;
-
-                }
-
-                
-
-
-
-            }
-        }
-
         if (that.routinemanger.listRoutines().length) {
             throw new Error("Already active!")
         }
 
+        await that.routinemanger.addRoutine(0, routine_check_cluster_status, 10)
+        that.log.addlog("Routine: routine_check_cluster_status enabled", { color: "green", warn: "Routine-Info", level: 3 })
         await that.routinemanger.addRoutine(1, routine_fetch_domains, 30)
         that.log.addlog("Routine: Fetch_Domains enabled", { color: "green", warn: "Routine-Info", level: 3 })
         await that.routinemanger.addRoutine(2, routine_fetch_bubbledns_settings, 30)
@@ -539,14 +528,12 @@ class mysqlclass {
         if (classdata.db.routinedata.this_server?.masternode) {
 
             await that.routinemanger.addRoutine(8, routine_synctest_bubbledns_servers, 180)
-            that.log.addlog("Routine: Synctest from Masternode to Slaves/Masters enabled", { color: "green", warn: "Routine-Info", level: 3 })
+            that.log.addlog("Routine: Synctest from Masternode to Slaves/Other Masters enabled", { color: "green", warn: "Routine-Info", level: 3 })
             await once_startup_masternode()
             that.log.addlog("ONCE: Startup-Commands enabled", { color: "green", warn: "Routine-Info", level: 3 })
 
         }
 
-        await that.routinemanger.addRoutine(10, routine_check_cluster_status, 10) //Has to be Last (because it can stop other routines that are needed for the startup!!)
-        that.log.addlog("Routine: routine_check_cluster_status enabled", { color: "green", warn: "Routine-Info", level: 3 })
         return
     }
 
