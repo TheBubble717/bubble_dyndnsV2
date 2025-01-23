@@ -83,7 +83,7 @@ async function bubbledns() {
         alllogs.tcpcomlog = new logclass({ screenLogLevel: config.tcpcomm.screenLogLevel, fileLogLevel: config.tcpcomm.fileLogLevel, addcallerlocation: config.tcpcomm.debug })
         await alllogs.tcpcomlog.activatestream("log/", addfunctions.unixtime_to_local() + " - TCP_com.log")
         classdata.tcpcom = new tcpcommuicationclass(config.tcpcomm, alllogs.tcpcomlog)
-        await classdata.tcpcom.create_connection()
+        await classdata.tcpcom.create_server()
             .then(function (res) {
                 log.addlog(res, { color: "green", warn: "Startup-Info", level: 3 })
             })
@@ -91,8 +91,6 @@ async function bubbledns() {
                 log.addlog(err, { color: "red", warn: "Startup-Error", level: 3 });
                 process.exit(1013)
             })
-
-
 
         //Activate DNS-Server (Gets always activated if databseentry of it exists, even if it is not used; It doesn't get registered as nameservers; Needed for Synctest)
         log.addlog("Activating DNS-Server", { color: "green", warn: "Startup-Info", level: 3 })
@@ -168,13 +166,19 @@ async function bubbledns() {
             log.addlog(err, { color: "red", warn: "FirstStartup", level: 3 })
             process.exit(1017)
         }
-        await classdata.db.databasequerryhandler_secure(`update bubbledns_servers set synctest=?`, [true], function (error, res) {
-            if (error) {
-                let err = `Error updating BubbleDNS_Server to synctest=1: ${error}`
-                log.addlog(err, { color: "red", warn: "FirstStartup", level: 3 })
-                process.exit(1018)
-            }
-        });
+
+        //Setting Synctest=1 on the first BubbleDNS-Server
+        try
+        {
+            await classdata.db.databasequerryhandler_secure(`update bubbledns_servers set synctest=?`, [true]);
+        }
+        catch(error)
+        {
+            let err = `Error updating BubbleDNS_Server to synctest=1: ${error}`
+            log.addlog(err, { color: "red", warn: "FirstStartup", level: 3 })
+            process.exit(1018)
+        }
+
         log.addlog(`Bubbledns-Server ns1.${classdata.db.routinedata.bubbledns_settings.maindomain} created and set to Main-Server`, { color: "green", warn: "FirstStartup", level: 3 })
         log.addlog(`Please add a second Bubbledns-Server nsX.${classdata.db.routinedata.bubbledns_settings.maindomain} for the functionality of the server`, { color: "green", warn: "FirstStartup", level: 3 })
 
@@ -186,18 +190,23 @@ async function bubbledns() {
             log.addlog(err, { color: "red", warn: "FirstStartup", level: 3 })
             process.exit(1019)
         }
-        await classdata.db.databasequerryhandler_secure(`update domains set builtin=1, verified=1 where domainname=?`, [classdata.db.routinedata.bubbledns_settings.maindomain], function (error, res) {
-            if (error) {
-                let err = `Error creating Main-Domain: ${error}`
-                log.addlog(err, { color: "red", warn: "FirstStartup", level: 3 })
-                process.exit(1020)
-            }
-        });
+
+        try
+        {
+            await classdata.db.databasequerryhandler_secure(`update domains set builtin=1, verified=1 where domainname=?`, [classdata.db.routinedata.bubbledns_settings.maindomain]);
+        }
+        catch(error)
+        {
+            let err = `Error creating Main-Domain: ${error}`
+            log.addlog(err, { color: "red", warn: "FirstStartup", level: 3 })
+            process.exit(1020)
+        }
         log.addlog(`Domain ${classdata.db.routinedata.bubbledns_settings.maindomain} created as builtin and owner set to ${newuserdata.get_user_public().mailaddress}`, { color: "green", warn: "FirstStartup", level: 3 })
 
 
 
         //Disabling First Time Installer 
+
         await classdata.db.databasequerryhandler_secure(`update bubbledns_settings set variablevalue=? where variablename=?`, [false, "newServer"], function (error, res) {
             if (error) {
                 let err = `Error creating Main-Domain: ${error}`
@@ -205,6 +214,17 @@ async function bubbledns() {
                 process.exit(1021)
             }
         });
+
+        try
+        {
+            await classdata.db.databasequerryhandler_secure(`update bubbledns_settings set variablevalue=? where variablename=?`, [false, "newServer"]);
+        }
+        catch(error)
+        {
+            let err = `Error disabling First Time Installer: ${error}`
+            log.addlog(err, { color: "red", warn: "FirstStartup", level: 3 })
+            process.exit(1020)
+        }
         log.addlog(`Disabling First Time Installer`, { color: "green", warn: "FirstStartup", level: 3 })
         log.addlog(`Killing Process`, { color: "green", warn: "FirstStartup", level: 3 })
         process.exit(1022)

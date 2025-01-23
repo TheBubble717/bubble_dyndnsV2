@@ -199,31 +199,31 @@ class mailclass extends EventEmitter {
 
             var users_confirmationkeys = [{ "id": randomid, "userid": keyinformation.userid, "keytext": randomkeytext, "keytype": keyinformation.keytype, "expirationtime": addfunctions.unixtime_to_local(new Date().valueOf() + 1 * 60 * 60 * 1000), "completed": false }]
 
-            classdata.db.databasequerryhandler_secure(`insert into users_confirmationkeys values (?,?,?,?,?,?);`, [users_confirmationkeys[0].id, users_confirmationkeys[0].userid, users_confirmationkeys[0].keytext, users_confirmationkeys[0].keytype, users_confirmationkeys[0].expirationtime, users_confirmationkeys[0].completed], async function (err, answer) {
-                if (err) {
+            await classdata.db.databasequerryhandler_secure(`insert into users_confirmationkeys values (?,?,?,?,?,?);`, [users_confirmationkeys[0].id, users_confirmationkeys[0].userid, users_confirmationkeys[0].keytext, users_confirmationkeys[0].keytype, users_confirmationkeys[0].expirationtime, users_confirmationkeys[0].completed])
+                .then(async function (databaseupdate) {
+                    if (databaseupdate.affectedRows === 1) {
+
+                        //Send Message
+                        let mailanswer = await classdata.mail.sendmessage({ "userid": keyinformation.userid }, keyinformation.keytype, { "confirmationkey": users_confirmationkeys[0].keytext })
+                        if (!mailanswer.success) {
+                            resolve({ "success": false, "msg": mailanswer.msg })
+                            return;
+                        }
+                        else {
+                            resolve({ "success": true, "data": keyinformation })
+                            return;
+                        }
+                    }
+                    else {
+                        resolve({ "success": false, "msg": "Databaseupdate failed" })
+                        return;
+                    }
+                })
+                .catch(function (err) {
                     that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
                     resolve({ "success": false, "msg": "Unknown Error" })
                     return;
-                }
-                if (answer.affectedRows === 1) {
-
-                    //Send Message
-                    let mailanswer = await classdata.mail.sendmessage({ "userid": keyinformation.userid }, keyinformation.keytype, { "confirmationkey": users_confirmationkeys[0].keytext })
-                    if (!mailanswer.success) {
-                        resolve({ "success": false, "msg": mailanswer.msg })
-                        return;
-                    }
-                    else {
-                        resolve({ "success": true, "data": keyinformation })
-                        return;
-                    }
-                }
-                else {
-                    resolve({ "success": false, "msg": "Databaseupdate failed" })
-                    return;
-                }
-            });
-
+                })
         });
     }
 
@@ -239,32 +239,37 @@ class mailclass extends EventEmitter {
                 return;
             }
 
-            classdata.db.databasequerryhandler_secure(`select users_confirmationkeys.* from users INNER JOIN users_confirmationkeys ON users.id = users_confirmationkeys.userid where users_confirmationkeys.keytext = ? AND users_confirmationkeys.completed = ? AND users_confirmationkeys.expirationtime >= ?`, [keyinformation.keytext, false, addfunctions.unixtime_to_local(new Date().valueOf())], async function (err, result) {
-                if (err) {
-                    that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
-                    resolve({ "success": false, "msg": "Unknown Error" })
-                    return;
-                }
-                if (result.length) {
-                    if (bool_delete) {
-                        result[0].completed = true
-                        await classdata.db.databasequerryhandler_secure(`UPDATE users_confirmationkeys set completed = ? where id = ?`, [true, result[0].id], function (err, deleteresult) {
-                            if (err) {
-                                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
-                                resolve({ "success": false, "msg": "Unknown Error" })
-                                return;
-                            }
-                        });
+            try
+            {
+                var confirmationkeysfromdb = await classdata.db.databasequerryhandler_secure(`select users_confirmationkeys.* from users INNER JOIN users_confirmationkeys ON users.id = users_confirmationkeys.userid where users_confirmationkeys.keytext = ? AND users_confirmationkeys.completed = ? AND users_confirmationkeys.expirationtime >= ?`, [keyinformation.keytext, false, addfunctions.unixtime_to_local(new Date().valueOf())]);
+                if(confirmationkeysfromdb.length)
+                {
+                    if (bool_delete)
+                    {
+                        confirmationkeysfromdb[0].completed = true;
+                        await classdata.db.databasequerryhandler_secure(`UPDATE users_confirmationkeys set completed = ? where id = ?`, [true, confirmationkeysfromdb[0].id]);
                     }
-                    resolve({ "success": true, "data": result[0] })
+                    resolve({ "success": true, "data": confirmationkeysfromdb[0] })
                     return;
                 }
-
-                else {
+                else
+                {
                     resolve({ "success": false, "msg": "Confirmationkey not found!" })
                     return;
                 }
-            });
+            
+            }
+            catch(err)
+            {
+                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
+                resolve({ "success": false, "msg": "Unknown Error" })
+                return;
+            }
+
+
+
+
+
         });
     }
 

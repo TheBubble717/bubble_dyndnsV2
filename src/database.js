@@ -15,6 +15,7 @@ class mysqlclass {
             "domains": [],
             "bubbledns_settings": [],
             "bubbledns_servers": [],
+            "cluster_status": null,
             "this_server": null,
             "mailserver_settings": [],
         },
@@ -99,16 +100,10 @@ class mysqlclass {
                 });
             });
 
-            if (callback && typeof callback == 'function') {
-                await callback("", result);
-            }
             return (result);
 
         } catch (err) {
             const error = `Error in databasequerryhandler: ${err}`;
-            if (callback && typeof callback === 'function') {
-                await callback(error, null);
-            }
             throw new Error(error);
         }
     }
@@ -278,15 +273,27 @@ class mysqlclass {
                     bubbledns_servers_from_db[i].virtual = 0
                 }
 
-                //Check if something changed on this instance (f.e activating WEB)
+                //Check if something changed on this instance (f.e activating WEB) except synctest
                 if (that.routinedata.bubbledns_servers.length) //Ignore if empty
                 {
                     let thisserver_old = [that.routinedata.this_server]
                     if (thisserver_old[0] == null) { thisserver_old = [] }
                     let thisserver_new = bubbledns_servers_from_db.filter(function (r) { if (((r.public_ipv4 == that.config.public_ip) || (r.public_ipv6 == that.config.public_ip)) && r.virtual == 0) { return true } })
                     if (JSON.stringify(thisserver_old) != JSON.stringify(thisserver_new)) {
-                        that.log.addlog("SERVER UPDATE DETECTED, KILLING PROGRAM", { color: "red", warn: "Startup-Error", level: 3 })
-                        process.exit(1003)
+
+                        //Don't kill if only synctest changes!
+                        //Prevent from touching both of the variables
+                        let shallowcopy_thisserver_old = [...thisserver_old]
+                        shallowcopy_thisserver_old[0] = { ...shallowcopy_thisserver_old[0] };
+                        let shallowcopy_thisserver_new = [...thisserver_new]
+                        shallowcopy_thisserver_new[0] = { ...shallowcopy_thisserver_new[0] };
+                        delete shallowcopy_thisserver_old[0].synctest
+                        delete shallowcopy_thisserver_new[0].synctest
+
+                        if (JSON.stringify(shallowcopy_thisserver_old) != JSON.stringify(shallowcopy_thisserver_new)) {
+                            that.log.addlog("SERVER UPDATE DETECTED, KILLING PROGRAM", { color: "red", warn: "Startup-Error", level: 3 })
+                            process.exit(1003)
+                        }
                     }
                 }
 
@@ -418,32 +425,128 @@ class mysqlclass {
             });
         }
 
-        if (this.routinemanger.listRoutines().length) {
+        var routine_check_cluster_status = async function () {
+
+            let update_routines_data = { "type": "clusterupdate", "data": that.routinedata.cluster_status }
+            let ispartofcluster = await classdata.db.databasequerryhandler_secure(`SHOW VARIABLES LIKE 'wsrep_on';`, [])
+            if (ispartofcluster[0].Value == "ON") {
+
+                //Check myself, if I am in the cluster right now!
+                {
+                    let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_cluster_status';`, [])
+                    if (testvalue[0].Value != "Primary") {
+                        that.routinedata.cluster_status = { "status": false, "clustertype":1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
+
+                        internal_routine_updater(update_routines_data)
+                        return;
+                    }
+                }
+
+                //Check myself, if I am in sync with the cluster right now!
+                {
+                    let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_local_state_comment';`, [])
+                    if (testvalue[0].Value != "Synced") {
+                        that.routinedata.cluster_status = { "status": false, "clustertype":1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
+                        internal_routine_updater(update_routines_data)
+                        return;
+                    }
+                }
+                
+
+                that.routinedata.cluster_status = { "status": true, "clustertype":1 }
+                internal_routine_updater(update_routines_data)
+                return;
+            }
+            //No Cluster -> Always OK //// cluster_status.clustertype=0 -> NO CLUSTER , cluster_status.clustertype=1 -> Working Cluster
+            else {
+                that.routinedata.cluster_status = { "status": true, "clustertype":0 }
+                internal_routine_updater(update_routines_data)
+                return;
+            }
+        }
+
+        //NOT A ROUTINE, normal function!!!
+        var internal_routine_updater = async function (prevousdata) {
+            if (prevousdata.type == 'clusterupdate') {
+                //Cluster went from non-working to working -> Disable Fetching Data from Database
+                if ((that.routinedata.cluster_status.clustertype == 1) && (prevousdata.data !== null) && (prevousdata.data?.status == true) && (that.routinedata.cluster_status.status == false)) {
+                    that.log.addlog(`Cluster offline! Reason: ${that.routinedata.cluster_status.err}` , { color: "red", warn: "Cluster-Error", level: 3 })
+
+                    that.routinemanger.removeRoutine(1).catch((err) => { console.log(err) })
+                    that.log.addlog("Routine: Fetch_Domains disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
+                    that.routinemanger.removeRoutine(2).catch((err) => { console.log(err) })
+                    that.log.addlog("Routine: Fetch_Bubbledns_settings disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
+                    that.routinemanger.removeRoutine(3).catch((err) => { console.log(err) })
+                    that.log.addlog("Routine: Fetch_Bubbledns_servers disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
+                    that.routinemanger.removeRoutine(4).catch((err) => { console.log(err) })
+                    that.log.addlog("Routine: Fetch_mailserver_settings disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
+
+                    if (classdata.db.routinedata.this_server?.masternode) {
+                        that.routinemanger.removeRoutine(8).catch((err) => { console.log(err) })
+                        that.log.addlog("Routine: Synctest from Masternode to Slaves/Masters disabled", { color: "yellow", warn: "Routine-Warning", level: 3 })
+                    }
+                }
+
+                //Cluster went from working to non-working -> Re-Enable Fetching Data from Database
+                else if ((that.routinedata.cluster_status.clustertype == 1) && (prevousdata.data !== null) && (prevousdata.data?.status == false) && (that.routinedata.cluster_status.status == true)) {
+                    
+
+                    that.routinemanger.addRoutine(1, routine_fetch_domains, 30).catch((err) => { console.log(err) })
+                    that.log.addlog("Routine: Fetch_Domains enabled", { color: "green", warn: "Routine-Info", level: 3 })
+                    that.routinemanger.addRoutine(2, routine_fetch_bubbledns_settings, 30).catch((err) => { console.log(err) })
+                    that.log.addlog("Routine: Fetch_Bubbledns_settings enabled", { color: "green", warn: "Routine-Info", level: 3 })
+                    that.routinemanger.addRoutine(3, routine_fetch_bubbledns_servers, 30).catch((err) => { console.log(err) })
+                    that.log.addlog("Routine: Fetch_Bubbledns_servers enabled", { color: "green", warn: "Routine-Info", level: 3 })
+                    that.routinemanger.addRoutine(4, routine_fetch_mailserver_settings, 30).catch((err) => { console.log(err) })
+                    that.log.addlog("Routine: Fetch_mailserver_settings enabled", { color: "green", warn: "Routine-Info", level: 3 })
+
+                    if (classdata.db.routinedata.this_server?.masternode) {
+
+                        await that.routinemanger.addRoutine(8, routine_synctest_bubbledns_servers, 180).catch((err) => { console.log(err) })
+                        that.log.addlog("Routine: Synctest from Masternode to Slaves/Masters enabled", { color: "green", warn: "Routine-Info", level: 3 })
+                    }
+
+                    //Additonally set Synctest=0
+                    classdata.db.routinedata.this_server.synctest =0;
+
+                }
+
+                
+
+
+
+            }
+        }
+
+        if (that.routinemanger.listRoutines().length) {
             throw new Error("Already active!")
         }
 
-        await this.routinemanger.addRoutine(1, routine_fetch_domains, 30)
-        this.log.addlog("Routine: Fetch_Domains activated", { color: "green", warn: "Startup-Info", level: 3 })
-        await this.routinemanger.addRoutine(2, routine_fetch_bubbledns_settings, 30)
-        this.log.addlog("Routine: Fetch_Bubbledns_settings activated", { color: "green", warn: "Startup-Info", level: 3 })
-        await this.routinemanger.addRoutine(3, routine_fetch_bubbledns_servers, 30)
-        this.log.addlog("Routine: Fetch_Bubbledns_servers activated", { color: "green", warn: "Startup-Info", level: 3 })
-        await this.routinemanger.addRoutine(4, routine_fetch_mailserver_settings, 30)
-        this.log.addlog("Routine: Fetch_mailserver_settings activated", { color: "green", warn: "Startup-Info", level: 3 })
-        await this.routinemanger.addRoutine(5, routine_delete_cache_dnsentry, 60)
-        this.log.addlog("Routine: Delete_cache_dnsentry activated", { color: "green", warn: "Startup-Info", level: 3 })
-        await this.routinemanger.addRoutine(6, routine_check_updates, 86400)
-        this.log.addlog("Routine: routine_check_updates activated", { color: "green", warn: "Startup-Info", level: 3 })
+        await that.routinemanger.addRoutine(1, routine_fetch_domains, 30)
+        that.log.addlog("Routine: Fetch_Domains enabled", { color: "green", warn: "Routine-Info", level: 3 })
+        await that.routinemanger.addRoutine(2, routine_fetch_bubbledns_settings, 30)
+        that.log.addlog("Routine: Fetch_Bubbledns_settings enabled", { color: "green", warn: "Routine-Info", level: 3 })
+        await that.routinemanger.addRoutine(3, routine_fetch_bubbledns_servers, 30)
+        that.log.addlog("Routine: Fetch_Bubbledns_servers enabled", { color: "green", warn: "Routine-Info", level: 3 })
+        await that.routinemanger.addRoutine(4, routine_fetch_mailserver_settings, 30)
+        that.log.addlog("Routine: Fetch_mailserver_settings enabled", { color: "green", warn: "Routine-Info", level: 3 })
+        await that.routinemanger.addRoutine(5, routine_delete_cache_dnsentry, 60)
+        that.log.addlog("Routine: Delete_cache_dnsentry enabled", { color: "green", warn: "Routine-Info", level: 3 })
+        await that.routinemanger.addRoutine(6, routine_check_updates, 86400)
+        that.log.addlog("Routine: routine_check_updates enabled", { color: "green", warn: "Routine-Info", level: 3 })
 
         //Only Masternode
         if (classdata.db.routinedata.this_server?.masternode) {
 
-            await this.routinemanger.addRoutine(7, routine_synctest_bubbledns_servers, 180)
-            this.log.addlog("Routine: Synctest from Masternode to Slaves activated", { color: "green", warn: "Startup-Info", level: 3 })
+            await that.routinemanger.addRoutine(8, routine_synctest_bubbledns_servers, 180)
+            that.log.addlog("Routine: Synctest from Masternode to Slaves/Masters enabled", { color: "green", warn: "Routine-Info", level: 3 })
             await once_startup_masternode()
-            this.log.addlog("ONCE: Startup-Commands activated", { color: "green", warn: "Startup-Info", level: 3 })
+            that.log.addlog("ONCE: Startup-Commands enabled", { color: "green", warn: "Routine-Info", level: 3 })
 
         }
+
+        await that.routinemanger.addRoutine(10, routine_check_cluster_status, 10) //Has to be Last (because it can stop other routines that are needed for the startup!!)
+        that.log.addlog("Routine: routine_check_cluster_status enabled", { color: "green", warn: "Routine-Info", level: 3 })
         return
     }
 
@@ -490,7 +593,7 @@ class RoutineManager {
      * Remove a routine
      * @param {string} id - Unique identifier for the routine
      */
-    removeRoutine(id) {
+    async removeRoutine(id) {
         const routine = this.routines.get(id);
         if (!routine) {
             throw Error(`Routine with id "${id}" does not exist.`)

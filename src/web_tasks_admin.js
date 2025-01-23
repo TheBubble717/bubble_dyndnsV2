@@ -372,7 +372,7 @@ async function pretask(req, res, callback) {
     }
     catch (err) {
         if (callback && typeof callback == 'function') {
-            await callback(err, "");
+            await callback("API doesn't belong to a user or is not an admin", "");
         }
         //We don't want the throw to go one level up and the error gets already processed in the callback!
         return;

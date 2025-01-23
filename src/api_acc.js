@@ -235,14 +235,9 @@ class apiclass_acc {
 
         var user_data = function (userid) {
             return new Promise(async (resolve, reject) => {
-                classdata.db.databasequerryhandler_secure(`select * from users where id=? `, [userid], function (err, res) {
-                    if (err) {
-                        reject(err)
-                        return;
-                    }
-                    resolve(new classdata.classes.userclass(res[0]))
-                    return;
-                });
+                classdata.db.databasequerryhandler_secure(`select * from users where id=? `, [userid])
+                .then(function(res){resolve(new classdata.classes.userclass(res[0]))})
+                .catch(reject)
             });
         }
 

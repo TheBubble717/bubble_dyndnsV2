@@ -9,7 +9,7 @@ class apiclass_admin {
         this.log = log
     }
 
-    
+
     async dns_upstream_servers_list() {
         var result = await classdata.db.databasequerryhandler_secure(`select * from dns_upstreamservers`, [])
         return { success: true, data: result };
@@ -124,6 +124,11 @@ class apiclass_admin {
             }
         }
 
+        //Only allow SyncTest to happen if System has Cluster-Status OK
+        if(!classdata.db.routinedata.cluster_status.status)
+        {
+            return ({ "success": false, "msg": `Unable to test, Cluster NOT OK: ${classdata.db.routinedata.cluster_status.msg}` })
+        }
 
         //Search BubbleDNS_SERVER
         var bubblednsserver = classdata.db.routinedata.bubbledns_servers.filter(r => r.id == bubblednsservertotest.id)[0]
@@ -140,8 +145,7 @@ class apiclass_admin {
         if (bubblednsserver == classdata.db.routinedata.this_server) {
 
             //Should be looked in the future with multiple Masternodes
-            let forcesynctesttruequery = await classdata.db.databasequerryhandler_secure(`UPDATE bubbledns_servers set synctest=1 where id=?`, [bubblednsservertotest.id])
-            return ({ "success": false, "msg": "Server can't check itself, forcing Synctest=1" })
+            return ({ "success": false, "msg": "Server can't check itself" })
         }
 
         var testdata = addfunctions.randomapif()
@@ -177,6 +181,7 @@ class apiclass_admin {
         else {
             return ({ "success": false, "msg": "Synctest failed! Testvalue not returned!" })
         }
+
     }
 
     async bubbledns_servers_create(bubblednsserver) {

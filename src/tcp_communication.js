@@ -10,10 +10,11 @@ class tcpcommuicationclass {
         this.config = config;
         this.log = log,
             this.server = null,
-            this.clients = []
+            this.client = null
     }
 
-    async create_connection() {
+
+    async create_server() {
         var that = this
         return new Promise(async (resolve, reject) => {
 
@@ -55,50 +56,64 @@ class tcpcommuicationclass {
                 }
             });
 
+            Promise.all([tcp_servercreation])
+                .then(resolve)
+                .catch(reject)
+
+        });
+    }
+
+    //Connects to the Masterserver with the lowest ID that has Synctest=1;virtual=0 and is this_server;
+    async create_client() {
+        var that = this
+        return new Promise(async (resolve, reject) => {
             var tcp_clientcreation = new Promise(async (startupresolve, startupreject) => {
-                let masterserverstoconnecto = classdata.db.routinedata.bubbledns_servers.filter(function (r) { if ((classdata.db.routinedata.this_server.id !== r.id) && (r.virtual == 0) && (r.masternode == 1)) { return true } })
-                var answer = ""
-                masterserverstoconnecto.forEach(async function (bubblednsserver) {
-                    var config = {
-                        authkey: "1234",
-                        "cert": readFileSync(path.resolve() + that.config.tls.client_cert),
-                        "key": readFileSync(path.resolve() + that.config.tls.client_key),
-                        "server": readFileSync(path.resolve() + that.config.tls.server_cert),
-                        host: bubblednsserver.internal_ipv4,
-                        port: that.config.port,
-                        tcpoptions: {
-                            checkServerIdentity: () => undefined,
-                        }
+                let masterservertoconnecto = classdata.db.routinedata.bubbledns_servers.filter(function (r) { if ((classdata.db.routinedata.this_server.id !== r.id) && (r.virtual == 0) && (r.masternode == 1) && (r.synctest == 1)) { return true } }).sort((a, b) => b.id - a.id);
+                if (masterservertoconnecto.length) {
+                    masterservertoconnecto = masterservertoconnecto[0]
+                }
+                var config = {
+                    authkey: "1234",
+                    "cert": readFileSync(path.resolve() + that.config.tls.client_cert),
+                    "key": readFileSync(path.resolve() + that.config.tls.client_key),
+                    "server": readFileSync(path.resolve() + that.config.tls.server_cert),
+                    host: masterservertoconnecto.internal_ipv4,
+                    port: that.config.port,
+                    tcpoptions: {
+                        checkServerIdentity: () => undefined,
                     }
+                }
 
-                    var tcp_client = new tcp_client_class(config)
-                    try {
-                        await tcp_client.create_client()
-                        that.clients.push(tcp_client)
+                that.client = new tcp_client_class(config)
+                try {
+                    await that.client.create_client()
 
-                        tcp_client.em.on('command', async function (message) {
-                            that.message_handler(message)
-                        });
+                    that.client.em.on('command', async function (message) {
+                        that.message_handler(message)
+                    });
 
-                        tcp_client.em.on('end', async function (data) {
-                            that.end_handler_client(data)
-                            startupreject(data)
-                        });
+                    that.client.em.on('end', async function (data) {
+                        that.end_handler_client(data)
+                        startupreject(data)
+                    });
 
-                        tcp_client.em.on('errorhandling', async function (data) {
-                            that.error_handler_client(data)
-                            startupreject(data)
-                        });
+                    that.client.em.on('errorhandling', async function (data) {
+                        that.error_handler_client(data)
+                        startupreject(data)
+                    });
 
-                        answer = answer + `Sucessfully connected to Server ${bubblednsserver.internal_ipv4}/${classdata.db.routinedata.bubbledns_servers[0].subdomainname}.${classdata.db.routinedata.bubbledns_settings.maindomain}\n`
-                    }
-                    catch (err) {
-                        answer = answer + `Failed to connect to Server ${bubblednsserver.internal_ipv4}/${classdata.db.routinedata.bubbledns_servers[0].subdomainname}.${classdata.db.routinedata.bubbledns_settings.maindomain}\n`
-                    }
-                    startupresolve(answer);
-                });
-
+                    var answer = `Sucessfully connected to Server ${bubblednsserver.internal_ipv4}/${classdata.db.routinedata.bubbledns_servers[0].subdomainname}.${classdata.db.routinedata.bubbledns_settings.maindomain}\n`
+                }
+                catch (err) {
+                    var answer = `Failed to connect to Server ${bubblednsserver.internal_ipv4}/${classdata.db.routinedata.bubbledns_servers[0].subdomainname}.${classdata.db.routinedata.bubbledns_settings.maindomain}\n`
+                }
+                startupresolve(answer);
             });
+
+            Promise.all([tcp_clientcreation])
+                .then(resolve)
+                .catch(reject)
+
         });
     }
 
