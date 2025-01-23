@@ -143,9 +143,12 @@ In this setup, the other servers need to have the variable `masternode`=0 <br />
 Great tutorial under: https://mariadb.com/kb/en/setting-up-replication/
 
 
-### Modern Master-Master-Connection using 
+### Modern Master-Master-Cluster using Galera Cluster (Mariadb)
 In this setup, the other servers need to have the variable `masternode`=1 <br />
 Great tutorial under: https://www.ionos.at/digitalguide/hosting/hosting-technik/galera-cluster-mariadb-auf-ubuntu-2004/ (German website)
+
+### Master-Master-Slave Cluster
+This Setup could work, but is not tested.
 
 
 ## Final Words
