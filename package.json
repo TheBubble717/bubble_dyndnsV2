@@ -27,7 +27,7 @@
     "dompurify": "^3.2.3",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.1",
-    "jsdom": "^25.0.1",
+    "jsdom": "^26.0.0",
     "mysql": "^2.18.1",
     "nodemailer": "^6.9.16"
   }
