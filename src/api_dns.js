@@ -9,7 +9,7 @@ class apiclass_dns {
         this.log = log
     }
 
-    
+
     async dnsentry_update(user, dnsentry) {
         var that = this;
         //Check if everything that's needed in dnsentry is set
@@ -124,7 +124,6 @@ class apiclass_dns {
         var that = this;
 
         //Check if everything that's needed in dnsentry is set
-
         {
             let requiredFields = { "id": "number" };
             dnsentry = addfunctions.objectconverter(dnsentry)
@@ -464,14 +463,23 @@ class apiclass_dns {
             }
         }
 
+        //Check if Domain exists and User is the Owner
         var domainfromdbtodelete = await classdata.db.databasequerryhandler_secure(`select * from domains where ownerid = ? and id = ?`, [user.get_user_public().id, domaintodelete.id]);
-        if (domainfromdbtodelete.length) {
-            const promise1 = classdata.db.databasequerryhandler_secure(`update domains set isregistered =? where id= ? AND ownerid = ?`, [false, domaintodelete.id, user.get_user_public().id,]);
-            const promise2 = classdata.db.databasequerryhandler_secure(`DELETE FROM domains_share where domainid = ?`, [domaintodelete.id]);
-            const promise3 = classdata.db.databasequerryhandler_secure(`DELETE FROM dns_entries where domainid = ?`, [domaintodelete.id]);
-            var databaseupdate = await Promise.all([promise1, promise2, promise3])
-            return ({ "success": true, "data": "Done" })
+        if (!domainfromdbtodelete.length) {
+            return ({ "success": false, "msg": `NO Domain with the id ${domaintodelete.id} found!` })
         }
+
+        //If you want to delete the maindomain, decline
+        if (classdata.db.routinedata.bubbledns_settings.maindomain == domainfromdbtodelete[0].domainname) {
+            return ({ "success": false, "msg": "Can't delete the maindomain!" })
+        }
+
+        const promise1 = classdata.db.databasequerryhandler_secure(`update domains set isregistered =? where id= ? AND ownerid = ?`, [false, domaintodelete.id, user.get_user_public().id,]);
+        const promise2 = classdata.db.databasequerryhandler_secure(`DELETE FROM domains_share where domainid = ?`, [domaintodelete.id]);
+        const promise3 = classdata.db.databasequerryhandler_secure(`DELETE FROM dns_entries where domainid = ?`, [domaintodelete.id]);
+        var databaseupdate = await Promise.all([promise1, promise2, promise3])
+        return ({ "success": true, "data": "Done" })
+
     }
 
     async domain_verify(user, domaintoverify)  //Verify
