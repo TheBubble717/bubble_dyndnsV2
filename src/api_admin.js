@@ -412,6 +412,14 @@ class apiclass_admin {
             }
         }
 
+        //Require that no virtual BubbleDNS is using this BubbleDNS-Server
+        {
+            let testvalue = await classdata.db.databasequerryhandler_secure(`select * from bubbledns_servers_virtual where bubblednsserverid = ?`, [bubblednsserver.id]);
+            if (testvalue.length) {
+                return ({ "success": false, "msg": "Unable to delete BubbleDNS-Server, there is a virtual BubbleDNS-Server using this server" })
+            }
+        }
+
 
         const databaseupdate1 = await classdata.db.databasequerryhandler_secure(`DELETE FROM bubbledns_servers where id =?`, [bubblednsserver.id]);
         const databaseupdate2 = await classdata.db.databasequerryhandler_secure(`DELETE FROM bubbledns_servers_virtual where id =?`, [bubblednsserver.id]);

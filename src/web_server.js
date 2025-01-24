@@ -320,7 +320,7 @@ class webclass extends EventEmitter {
                 }
                 await taskProcessor.process(req, res, responseclass);
                 timetocomplete.stop = new Date().getTime();
-                that.log.addlog(`Task: ${req.body.task} Performance: ${timetocomplete.stop - timetocomplete.start}ms`, { color: "white", warn: "Webserver-Log", level: 1 })
+                that.log.addlog(`Task: ${req.body.task} Performance: ${timetocomplete.stop - timetocomplete.start}ms`, { color: "white", warn: "Webserver-Info", level: 1 })
             } catch (err) {
                 that.log.addlog(`Error processing task for lockKey ${lockKey}: ${err.message}`, { color: "red", "warn": "Webserver-Error", level: 3 }); //Shouldn't be able to be thrown!
             } finally {

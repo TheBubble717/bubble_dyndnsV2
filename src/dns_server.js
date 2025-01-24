@@ -303,7 +303,7 @@ class dnsclass extends EventEmitter {
                 var formattingofresponse = response.data.toString()
             }
             timetocomplete.stop = new Date().getTime();
-            that.log.addlog(`Who:${responseclass.rinfo.address} Sel.Server:${response.server} ----- Domain:${question.name}  ----- Flags:${response.dnsflags}   ----- Performance: ${timetocomplete.stop - timetocomplete.start}ms  ----- Type:(${question.type}->${response.type}) --> ${formattingofresponse}`, { color: "white", warn: "DNS-Log", level: 1 })
+            that.log.addlog(`Who:${responseclass.rinfo.address} Sel.Server:${response.server} ----- Domain:${question.name}  ----- Flags:${response.dnsflags}   ----- Performance: ${timetocomplete.stop - timetocomplete.start}ms  ----- Type:(${question.type}->${response.type}) --> ${formattingofresponse}`, { color: "white", warn: "DNS-Info", level: 1 })
 
         }
         catch (err) {

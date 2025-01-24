@@ -29,7 +29,7 @@ class mailclass extends EventEmitter {
             }
 
             if (!classdata.db.routinedata.mailserver_settings.length) {
-                that.log.addlog(`Error sending Mail to ${recipentmailaddress}: No Mailserver configured! `, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
+                that.log.addlog(`Error sending Mail to ${recipentmailaddress}: No Mailserver configured! `, { color: "yellow", warn: "MAIL-Warning", level: 2 })
                 resolve({ "success": false, "msg": "No Mailserver configured!" })
                 return;
             }
@@ -74,11 +74,11 @@ class mailclass extends EventEmitter {
 
             nodemailerTransport.sendMail(mailOptions, (err, info) => {
                 if (err) {
-                    that.log.addlog(`Error sending Mail to ${mailOptions.to}:  ${err.message}`, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
+                    that.log.addlog(`Error sending Mail to ${mailOptions.to}:  ${err.message}`, { color: "yellow", warn: "MAIL-Warning", level: 2 })
                     resolve({ "success": false, "msg": "Unknown Error" })
                     return;
                 }
-                that.log.addlog(`Mail sent to ${mailOptions.to} with the subject: "${message.subject}" with the code: ${JSON.stringify(info.response)}`, { color: "green", warn: "MAIL-Log", level: 1 })
+                that.log.addlog(`Mail sent to ${mailOptions.to} with the subject: "${message.subject}" with the code: ${JSON.stringify(info.response)}`, { color: "green", warn: "MAIL-Info", level: 1 })
                 resolve({ "success": true, "data": info.response })
                 return;
             });
@@ -163,7 +163,7 @@ class mailclass extends EventEmitter {
 
             }
             catch (err) {
-                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
+                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "MAIL-Warning", level: 2 })
                 resolve({ "success": false, "msg": "Unknown Error" })
                 return;
             }
@@ -177,7 +177,7 @@ class mailclass extends EventEmitter {
                 while (answer && answer.length)
             }
             catch (err) {
-                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
+                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "MAIL-Warning", level: 2 })
                 resolve({ "success": false, "msg": "Unknown Error" })
                 return;
             }
@@ -192,7 +192,7 @@ class mailclass extends EventEmitter {
 
             }
             catch (err) {
-                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
+                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "MAIL-Warning", level: 2 })
                 resolve({ "success": false, "msg": "Unknown Error" })
                 return;
             }
@@ -220,7 +220,7 @@ class mailclass extends EventEmitter {
                     }
                 })
                 .catch(function (err) {
-                    that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
+                    that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "MAIL-Warning", level: 2 })
                     resolve({ "success": false, "msg": "Unknown Error" })
                     return;
                 })
@@ -261,7 +261,7 @@ class mailclass extends EventEmitter {
             }
             catch(err)
             {
-                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "API-MAIL-Warning", level: 2 })
+                that.log.addlog("Unknown ERROR: " + err, { color: "yellow", warn: "MAIL-Warning", level: 2 })
                 resolve({ "success": false, "msg": "Unknown Error" })
                 return;
             }

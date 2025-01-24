@@ -74,16 +74,14 @@ class mysqlclass {
             });
 
             var clusterstatus = false
-            do
-            {
+            do {
                 clusterstatus = await check_cluster()
-                if(!clusterstatus)
-                {
+                if (!clusterstatus) {
                     await addfunctions.waittime(5)
                 }
-                
+
             }
-            while(!clusterstatus)
+            while (!clusterstatus)
 
             let answer = `Successfully connected to Mysql-Database`
             return (answer);
@@ -167,35 +165,74 @@ class mysqlclass {
 
             // Create a new lock for this request
             const locking_promise = new Promise(async (lockResolve, lockReject) => {
+                var cached_no_data = 0; //4 Means everything exists with noDATA
                 try {
-                    // Check for exact cached entry
-                    const locallysavedexact = that.routinecaches.dnsentries.filter(function (r) {
-                        return r.entryname === entryname && (r.entrytype === entrytype || r.entrytype === "CNAME") && r.domainid === domainid;
-                    });
 
+                    //Checked for cached entry exactly
+                    const locallysavedexact = that.routinecaches.dnsentries.filter(function (r) { return r.entryname === entryname && (r.entrytype === entrytype || r.entrytype === "CNAME") && r.domainid === domainid; })
                     if (locallysavedexact.length) {
-                        if (locallysavedexact.length === 1 && locallysavedexact[0].noData) {
-                            // Check for wildcard cached entry as a fallback
-                            const locallysavedstar = that.routinecaches.dnsentries.filter(function (r) {
-                                return r.entryname === "*" && (r.entrytype === entrytype || r.entrytype === "CNAME") && r.domainid === domainid;
-                            });
-                            if (locallysavedstar.length === 1 && locallysavedstar[0].noData) {
-                                lockReject("No Data found! (Cached)");
-                            } else {
-                                lockResolve(locallysavedstar);
+
+                        //CNAME exists, and has DATA
+                        const locallysavedexact_cname = locallysavedexact.filter(function (r) { return r.entrytype === "CNAME" })
+                        if (locallysavedexact_cname.length) {
+                            if (!locallysavedexact_cname[0].noData) {
+                                lockResolve(locallysavedexact_cname)
+                                return;
                             }
-                            return;
-                        } else {
-                            lockResolve(locallysavedexact);
-                            return;
+                            cached_no_data++
                         }
+
+                        //Entry with Entrytype exists, and has DATA
+                        const locallysavedexact_entrytype = locallysavedexact.filter(function (r) { return r.entrytype === entrytype })
+                        if (locallysavedexact_entrytype.length) {
+                            if (!locallysavedexact_entrytype[0].noData) {
+                                lockResolve(locallysavedexact_entrytype)
+                                return;
+                            }
+                            cached_no_data++
+                        }
+                    }
+
+
+                    //Checked for cached entry exactly
+                    const locallysavedstar = that.routinecaches.dnsentries.filter(function (r) { return r.entryname === "*" && (r.entrytype === entrytype || r.entrytype === "CNAME") && r.domainid === domainid; })
+                    if (locallysavedstar.length) {
+
+
+                        //CNAME exists, and has DATA
+                        const locallysavedstar_cname = locallysavedstar.filter(function (r) { return r.entrytype === "CNAME" })
+                        if (locallysavedstar_cname.length) {
+                            if (!locallysavedstar_cname[0].noData) {
+                                lockResolve(locallysavedstar_cname)
+                                return;
+                            }
+                            cached_no_data++
+                        }
+
+
+
+                        //Entry with Entrytype exists, and has DATA
+                        const locallysavedexact_entrytype = locallysavedstar.filter(function (r) { return r.entrytype === entrytype })
+                        if (locallysavedexact_entrytype.length) {
+                            if (!locallysavedexact_entrytype[0].noData) {
+                                lockResolve(locallysavedexact_entrytype)
+                                return;
+                            }
+                            cached_no_data++
+                        }
+                    }
+
+                    //If cached Data of all of them exist(cname_exactly,entrytype_exactly,cname_star,entrytype_star) -> Reject
+                    if (cached_no_data === 4) {
+                        lockReject("No Data found! (Cached)");
+                        return;
                     }
 
                     // If "@" (main entry) is requested
                     if (entryname === "@") {
                         const response = await that.databasequerryhandler_secure(
-                            `select * FROM dns_entries where entryname = ? and entrytype = ? and domainid = ?`,
-                            ["@", entrytype, domainid]
+                            `select * FROM dns_entries where entryname = ? and (entrytype = ? or entrytype =?) and domainid = ?`,
+                            ["@", entrytype, "CNAME", domainid]
                         );
 
                         if (response.length) {
@@ -203,6 +240,7 @@ class mysqlclass {
                             lockResolve(response);
                         } else {
                             that.routinecaches.dnsentries.push({ entryname, entrytype, domainid, noData: true });
+                            if (entrytype !== "CNAME") { that.routinecaches.dnsentries.push({ entryname, entrytype: "CNAME", domainid, noData: true }); }
                             lockReject("No Data found! (Requested)");
                         }
                         return;
@@ -226,6 +264,7 @@ class mysqlclass {
                         return;
                     } else {
                         that.routinecaches.dnsentries.push({ entryname, entrytype, domainid, noData: true });
+                        if (entrytype !== "CNAME") { that.routinecaches.dnsentries.push({ entryname, entrytype: "CNAME", domainid, noData: true }); }
                     }
 
                     if (wildcardResponse.length) {
@@ -243,6 +282,7 @@ class mysqlclass {
                         });
                         if (!existingWildcard.length) {
                             that.routinecaches.dnsentries.push({ entryname: "*", entrytype, domainid, noData: true });
+                            if (entrytype !== "CNAME") { that.routinecaches.dnsentries.push({ entryname: "*", entrytype: "CNAME", domainid, noData: true }); }
                         }
                     }
 
@@ -266,10 +306,10 @@ class mysqlclass {
         var once_startup_masternode = async function () {
             try {
                 //Delete old expired testvalues
-                var test = await that.databasequerryhandler_secure("delete from bubbledns_servers_testvalues where expirationtime <=?",[addfunctions.unixtime_to_local(new Date().valueOf())]);
+                var test = await that.databasequerryhandler_secure("delete from bubbledns_servers_testvalues where expirationtime <=?", [addfunctions.unixtime_to_local(new Date().valueOf())]);
             }
             catch (err) {
-                that.log.addlog("Error deleting old testvalues", { color: "red", warn: "Startup-Error", level: 3 })
+                that.log.addlog("Error deleting old testvalues", { color: "red", warn: "Routine-Error", level: 3 })
                 process.exit(1000)
             }
         }
@@ -284,7 +324,7 @@ class mysqlclass {
                     let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_cluster_status';`, [])
                     if (testvalue[0].Value != "Primary") {
                         that.routinedata.cluster_status = { "status": false, "clustertype": 1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
-                        that.log.addlog(`Cluster Error: ${that.routinedata.cluster_status.err}`, { color: "red", warn: "Startup-Error", level: 3 })
+                        that.log.addlog(`Cluster Error: ${that.routinedata.cluster_status.err}`, { color: "red", warn: "Routine-Error", level: 3 })
                         process.exit(1023)
                     }
                 }
@@ -294,17 +334,17 @@ class mysqlclass {
                     let testvalue = await classdata.db.databasequerryhandler_secure(`SHOW STATUS LIKE 'wsrep_local_state_comment';`, [])
                     if (testvalue[0].Value != "Synced") {
                         that.routinedata.cluster_status = { "status": false, "clustertype": 1, "err": `Galera Cluster Node not functional, ${testvalue[0].Variable_name} = ${testvalue[0].Value}` }
-                        that.log.addlog(`Cluster Error: ${that.routinedata.cluster_status.err}`, { color: "red", warn: "Startup-Error", level: 3 })
+                        that.log.addlog(`Cluster Error: ${that.routinedata.cluster_status.err}`, { color: "red", warn: "Routine-Error", level: 3 })
                         process.exit(1024)
                     }
                 }
 
-                that.routinedata.cluster_status = { "status": true, "clustertype": 1 , "err":""}
+                that.routinedata.cluster_status = { "status": true, "clustertype": 1, "err": "" }
                 return;
             }
             //No Cluster -> Always OK //// cluster_status.clustertype=0 -> NO CLUSTER , cluster_status.clustertype=1 -> Working Cluster
             else {
-                that.routinedata.cluster_status = { "status": true, "clustertype": 0 , "err":""}
+                that.routinedata.cluster_status = { "status": true, "clustertype": 0, "err": "" }
                 return;
             }
         }
@@ -315,7 +355,7 @@ class mysqlclass {
                 that.routinedata.domains = domains;
             }
             catch (err) {
-                that.log.addlog("Error fetching Domains", { color: "red", warn: "Startup-Error", level: 3 })
+                that.log.addlog("Error fetching Domains", { color: "red", warn: "Routine-Error", level: 3 })
                 process.exit(1001)
             }
         }
@@ -336,7 +376,7 @@ class mysqlclass {
                 that.routinedata.bubbledns_settings = settings;
             }
             catch (err) {
-                that.log.addlog("Error fetching Bubbledns_settings", { color: "red", warn: "Startup-Error", level: 3 })
+                that.log.addlog("Error fetching Bubbledns_settings", { color: "red", warn: "Routine-Error", level: 3 })
                 process.exit(1002)
             }
 
@@ -367,7 +407,7 @@ class mysqlclass {
                         delete shallowcopy_thisserver_new[0].synctest
 
                         if (JSON.stringify(shallowcopy_thisserver_old) != JSON.stringify(shallowcopy_thisserver_new)) {
-                            that.log.addlog("SERVER UPDATE DETECTED, KILLING PROGRAM", { color: "red", warn: "Startup-Error", level: 3 })
+                            that.log.addlog("SERVER UPDATE DETECTED, KILLING PROGRAM", { color: "red", warn: "Routine-Error", level: 3 })
                             process.exit(1003)
                         }
                     }
@@ -381,6 +421,9 @@ class mysqlclass {
                         delete virtual_server.bubblednsserverid
                         virtual_server.virtual = 1
                         bubbledns_servers_from_db.push({ ...exists[0], ...virtual_server })
+                    }
+                    else {
+                        that.log.addlog(`Real BubbleDNS-Server ${virtual_server.bubblednsserverid} of the virtual BubbleDNS-Server ${virtual_server.id} was not found!`, { color: "red", warn: "Routine-Error", level: 3 })
                     }
 
                 });
@@ -398,7 +441,7 @@ class mysqlclass {
 
             }
             catch (err) {
-                that.log.addlog("Error fetching Bubbledns_servers", { color: "red", warn: "Startup-Error", level: 3 })
+                that.log.addlog("Error fetching Bubbledns_servers", { color: "red", warn: "Routine-Error", level: 3 })
                 process.exit(1004)
             }
         }
@@ -410,7 +453,7 @@ class mysqlclass {
                     await addfunctions.waittime(20); //Wait for the whole server to be initialized
 
                     //Only Synctest if the server self as Synctest =1
-                    if(!that.routinedata.this_server.synctest){return}
+                    if (!that.routinedata.this_server.synctest) { return }
 
                     for (let i = 0; i < that.routinedata.bubbledns_servers.length; i++) {
 
@@ -432,7 +475,7 @@ class mysqlclass {
                 })
             }
             catch (err) {
-                that.log.addlog("Error Routine routine_synctest_bubbledns_servers", { color: "red", warn: "Startup-Error", level: 3 })
+                that.log.addlog("Error Routine routine_synctest_bubbledns_servers", { color: "red", warn: "Routine-Error", level: 3 })
                 process.exit(1005)
             }
 
@@ -444,7 +487,7 @@ class mysqlclass {
                 that.routinedata.mailserver_settings = mailserver_settings;
             }
             catch (err) {
-                that.log.addlog("Error fetching mailserver_settings", { color: "red", warn: "Startup-Error", level: 3 })
+                that.log.addlog("Error fetching mailserver_settings", { color: "red", warn: "Routine-Error", level: 3 })
                 process.exit(1006)
             }
         }
@@ -462,7 +505,7 @@ class mysqlclass {
 
                 https.get(url, (response) => {
                     if (response.statusCode !== 200) {
-                        that.log.addlog(`Failed to check for Updates! Status code: ${response.statusCode}`, { color: "red", warn: "Updatecheck-Error", level: 3 })
+                        that.log.addlog(`Failed to check for Updates! Status code: ${response.statusCode}`, { color: "red", warn: "Routine-Error", level: 3 })
                         resolve()
                         return;
                     }
@@ -477,28 +520,28 @@ class mysqlclass {
                         try {
                             const json = JSON.parse(data);
                             if (json.version.localeCompare(that.packageJson.version, undefined, { numeric: true }) === 1) {
-                                that.log.addlog(`New Version available! Please download ${json.version} from Github.`, { color: "yellow", warn: "Updatecheck-Info", level: 2 })
+                                that.log.addlog(`New Version available! Please download ${json.version} from Github.`, { color: "yellow", warn: "Routine-Info", level: 2 })
                                 resolve()
                             }
                             else {
-                                that.log.addlog(`BubbleDNS is at the newest version available.`, { color: "green", warn: "Updatecheck-Info", level: 2 })
+                                that.log.addlog(`BubbleDNS is at the newest version available.`, { color: "green", warn: "Routine-Info", level: 2 })
                                 resolve()
                             }
                             return;
                         } catch (err) {
-                            that.log.addlog(`Failed to parse JSON: ${err.message}!`, { color: "red", warn: "Updatecheck-Error", level: 3 })
+                            that.log.addlog(`Failed to parse JSON: ${err.message}!`, { color: "red", warn: "Routine-Error", level: 3 })
                             resolve()
                             return;
                         }
                     });
 
                     response.on('error', (err) => {
-                        that.log.addlog(`Failed to check for Updates!`, { color: "red", warn: "Updatecheck-Error", level: 3 })
+                        that.log.addlog(`Failed to check for Updates!`, { color: "red", warn: "Routine-Error", level: 3 })
                         resolve()
                         return;
                     });
                 }).on('error', (err) => {
-                    that.log.addlog(`Failed to check for Updates!`, { color: "red", warn: "Updatecheck-Error", level: 3 })
+                    that.log.addlog(`Failed to check for Updates!`, { color: "red", warn: "Routine-Error", level: 3 })
                     resolve()
                     return;
                 });
@@ -513,16 +556,25 @@ class mysqlclass {
         that.log.addlog("Routine: routine_check_cluster_status enabled", { color: "green", warn: "Routine-Info", level: 3 })
         await that.routinemanger.addRoutine(1, routine_fetch_domains, 30)
         that.log.addlog("Routine: Fetch_Domains enabled", { color: "green", warn: "Routine-Info", level: 3 })
-        await that.routinemanger.addRoutine(2, routine_fetch_bubbledns_settings, 30)
+        await that.routinemanger.addRoutine(2, routine_fetch_bubbledns_settings, 60)
         that.log.addlog("Routine: Fetch_Bubbledns_settings enabled", { color: "green", warn: "Routine-Info", level: 3 })
         await that.routinemanger.addRoutine(3, routine_fetch_bubbledns_servers, 30)
         that.log.addlog("Routine: Fetch_Bubbledns_servers enabled", { color: "green", warn: "Routine-Info", level: 3 })
         await that.routinemanger.addRoutine(4, routine_fetch_mailserver_settings, 30)
         that.log.addlog("Routine: Fetch_mailserver_settings enabled", { color: "green", warn: "Routine-Info", level: 3 })
-        await that.routinemanger.addRoutine(5, routine_delete_cache_dnsentry, 60)
+        await that.routinemanger.addRoutine(5, routine_delete_cache_dnsentry, 90)
         that.log.addlog("Routine: Delete_cache_dnsentry enabled", { color: "green", warn: "Routine-Info", level: 3 })
-        await that.routinemanger.addRoutine(6, routine_check_updates, 86400)
-        that.log.addlog("Routine: routine_check_updates enabled", { color: "green", warn: "Routine-Info", level: 3 })
+
+        if(that.config.check_updates)
+        {
+            await that.routinemanger.addRoutine(6, routine_check_updates, 86400)
+            that.log.addlog("Routine: routine_check_updates enabled", { color: "green", warn: "Routine-Info", level: 3 })
+        }
+        else
+        {
+            that.log.addlog("Routine: routine_check_updates is disabled in the Configuration File", { color: "yellow", warn: "Routine-Warning", level: 3 })
+        }
+
 
         //Only Masternode
         if (classdata.db.routinedata.this_server?.masternode) {

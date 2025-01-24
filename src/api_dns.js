@@ -44,13 +44,26 @@ class apiclass_dns {
             }
         }
 
-        //Check if there is already a CNAME Entry for the same dnsentry with a different id
-        {
+
+        //Check if you want to set an CNAME -> Only 1 CNAME can exist at one Subdomain
+        if (dnsentry.entrytype == "CNAME") {
             let testvalue = await classdata.db.databasequerryhandler_secure(`select * from dns_entries where entryname = ? and entrytype=? and domainid = ? and id != ?`, [dnsentry.entryname, "CNAME", dnsentry.domainid, dnsentry.id]);
             if (testvalue.length) {
-                return ({ "success": false, "msg": "A DNS-Entry already exists for this subdomain with a CNAME record!" })
+                return ({ "success": false, "msg": "Only 1 CNAME Record can exist at one Subdomain" })
             }
         }
+
+        //Check if there is already a CNAME Record set for this Subdomain -> CNAME is not compatible with other Records
+        {
+            let testvalue1 = await classdata.db.databasequerryhandler_secure(`select * from dns_entries where entryname = ? and domainid = ? and id != ?`, [dnsentry.entryname, dnsentry.domainid, dnsentry.id]);
+            let testvalue2 = testvalue1.filter(r => r.entrytype == "CNAME")
+            if (testvalue2.length) {
+                return ({ "success": false, "msg": "A CNAME Record is not compatible with other Records" })
+            }
+        }
+
+
+
 
         //Check if DNS-Entry is in banned
         {
@@ -202,11 +215,20 @@ class apiclass_dns {
             }
         }
 
-        //Check if there is already a CNAME Entry for the same dnsentry
-        {
+        //Check if you want to set an CNAME -> Only 1 CNAME can exist at one Subdomain
+        if (dnsentry.entrytype == "CNAME") {
             let testvalue = await classdata.db.databasequerryhandler_secure(`select * from dns_entries where entryname = ? and entrytype=? and domainid = ?`, [dnsentry.entryname, "CNAME", dnsentry.domainid]);
             if (testvalue.length) {
-                return ({ "success": false, "msg": "A DNS-Entry already exists for this subdomain with a CNAME record!" })
+                return ({ "success": false, "msg": "Only 1 CNAME Record can exist at one Subdomain" })
+            }
+        }
+
+        //Check if there is already a CNAME Record set for this Subdomain -> CNAME is not compatible with other Records
+        {
+            let testvalue1 = await classdata.db.databasequerryhandler_secure(`select * from dns_entries where entryname = ? and domainid = ?`, [dnsentry.entryname, dnsentry.domainid]);
+            let testvalue2 = testvalue1.filter(r => r.entrytype == "CNAME")
+            if (testvalue2.length) {
+                return ({ "success": false, "msg": "A CNAME Record is not compatible with other Records" })
             }
         }
 

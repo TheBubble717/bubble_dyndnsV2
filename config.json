@@ -12,7 +12,8 @@
             "password":"<Your_Password>",
             "database":"bubbledns",
             "connectionLimit": 20
-        }
+        },
+        "check_updates":true
     },
     "dnsserver":
     {

@@ -240,19 +240,13 @@ class apiclass_acc {
                 .catch(reject)
             });
         }
-
-        try {
+        
             var promise1 = classdata.db.databasequerryhandler_secure(`select * from users_sessions where userid=? `, [usertoinspect.id])
             var promise2 = user_data(usertoinspect.id)
             var promise3 = classdata.api.dns.domain_list_owner(new classdata.classes.userclass({ "id": usertoinspect.id }))
             var promise4 = classdata.api.dns.domain_list_shared(new classdata.classes.userclass({ "id": usertoinspect.id }))
             var databasrequest = await Promise.all([promise1, promise2, promise3, promise4])
             return ({ "success": true, "data": databasrequest })
-        }
-        catch (err) {
-            that.log.addlog("Unknown ERROR:" + err, { color: "yellow", warn: "API-ACC-Warning", level: 2 })
-            return ({ "success": false, "msg": "Error inspecting User" })
-        }
     }
 
     async get_user_all()  //Returns all users as userclass
