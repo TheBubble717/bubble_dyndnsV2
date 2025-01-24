@@ -105,7 +105,7 @@ create table bubbledns_servers_testvalues
 (
 	testvalue varchar(100) NOT NULL,
 	expirationtime varchar(25) NOT NULL,
-	testedid int NOT NULL,
+	testedid int NOT NULL
 );
 
 create table subdomains_banned_builtin
