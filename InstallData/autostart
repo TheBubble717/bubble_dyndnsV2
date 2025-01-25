@@ -17,9 +17,13 @@ DIR="/home/bubbledns"
 
 case "$1" in
 start)
+sudo iptables -t nat -A PREROUTING -i eth0 -p udp --dport 53 -j REDIRECT --to-port 5300
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 53 -j REDIRECT --to-port 5300
 su $USER -c "pm2 start ${DIR}/server.js"
 ;;
 stop)
+sudo iptables -t nat -D PREROUTING -i eth0 -p udp --dport 53 -j REDIRECT --to-port 5300
+sudo iptables -t nat -D PREROUTING -i eth0 -p tcp --dport 53 -j REDIRECT --to-port 5300
 su $USER -c "pm2 stop ${DIR}/server.js"
 ;;
 *)

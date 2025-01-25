@@ -139,16 +139,34 @@ Don't add multiple Mailservers, only the first one will be used.
 BubbleDNS supports multiple servers with linked databases. <br />
 
 ### Classic Master-Slave
-In this setup, the other servers need to have the variable `masternode`=0 <br />
+In this setup, the other servers need to have the variable `masternode=0` <br />
 Great tutorial under: https://mariadb.com/kb/en/setting-up-replication/
 
 
 ### Modern Master-Master-Cluster using Galera Cluster (Mariadb)
-In this setup, the other servers need to have the variable `masternode`=1 <br />
+In this setup, the other servers need to have the variable `masternode=1` <br />
 Great tutorial under: https://www.ionos.at/digitalguide/hosting/hosting-technik/galera-cluster-mariadb-auf-ubuntu-2004/ (German website)
 
 ### Master-Master-Slave Cluster
 This Setup could work, but is not tested.
+
+## Update the DNS-Entries automatically
+You could use a small script to automatically connect to the API of the Server and update the DNS-Entry.<br>
+Most Requests between the Client(Browser) and the Server is API based, so you could ignore the website and configure everything using the API.<br>
+In order to manually Update the DNS-Entries to your current IP-Adress, you can use the following Link:
+```sh
+   http[s]://<MainDomain>/update&id=<DNS-Entry-ID>&apikey=<APIKEY>
+```
+In order to manually Update the DNS-Entries to a custom IP-Address, you can use the following Link:
+```sh
+   http[s]://<MainDomain>/update&id=<DNS-Entry-ID>&apikey=<APIKEY>&value=<IP-Address>
+```
+
+* DNS-Entry-ID: If you edit the DNS-Entry, you will find the value `id`.
+* APIKEY: There is currently no Interface that shows you your APIKEY, so you need to find it using F12 in the Network Tab or in the database.
+* IP-Address: The custom IP-Address that should be set
+
+You can only update DNS-Entries with the types A and AAAA.
 
 
 ## Final Words
