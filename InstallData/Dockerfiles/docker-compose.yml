@@ -1,0 +1,45 @@
+services:
+  bubbledns:
+    build: .
+    container_name: BubbleDNS_APP
+    working_dir: /app
+    restart: always
+    ports:
+      - "12512:12512/tcp"
+      - "53:5300/tcp"
+      - "53:5300/udp"
+    environment:
+      - ISDOCKER=true
+    depends_on:
+      - mariadb
+    volumes:
+      - bubbledns_volume:/app
+      - ./config.json:/app/config.json
+    networks:
+      - bubbledns-internal-network
+
+
+  mariadb:
+    image: mariadb:latest
+    container_name: BubbleDNS_DB
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=yourpassword
+      - MYSQL_DATABASE=mydatabase
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./db.sql:/docker-entrypoint-initdb.d/database.sql
+    networks:
+      - bubbledns-internal-network
+
+volumes:
+  mariadb_data:
+  bubbledns_volume:
+
+networks:
+  bubbledns-internal-network:
+    driver: bridge
+
+
+
+

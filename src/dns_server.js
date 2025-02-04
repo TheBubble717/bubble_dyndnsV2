@@ -217,7 +217,7 @@ class dnsclass extends EventEmitter {
                         }
                     }
                     //Main @.bubbledns.com A & AAAA request
-                    else if ((requested_domain.subdomain == "@" || requested_domain.subdomain == "www") && requested_domain.domain == classdata.db.routinedata.bubbledns_settings.maindomain && (question.type == "A" || question.type == "AAAA")) {
+                    else if (requested_domain.subdomain == "@" && requested_domain.domain == classdata.db.routinedata.bubbledns_settings.maindomain && (question.type == "A" || question.type == "AAAA")) {
                         var bubblednsserversweb = classdata.db.routinedata.bubbledns_servers.filter(r => r.enabled_web == 1 && r.synctest === 1 && r.virtual === 0)
                         if (question.type == "A") {
                             var dataresponse = bubblednsserversweb.filter(item => item != null && item.public_ipv4 != null).map(item => item.public_ipv4);

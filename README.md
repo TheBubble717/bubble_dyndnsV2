@@ -13,12 +13,11 @@ BubbleDNS is a self-hosted Dynamic DNS (DDNS) service similar to DynDNS or NO-IP
 ## Getting Started
 ### Requirements
 * A domain where the Registrar allows setting the NS Records (Like Namcheap).
-* A server with (Nodejs, Mariadb and Apache) OR (~Docker~ coming soon). The following installation refers to Debian / Ubuntu.
+* A server with (Nodejs, Mariadb and Apache) OR (Docker and Apache). The following installation refers to Debian / Ubuntu.
 * Open the following ports:
     * 53/udp & tcp
     * 80/tcp
     * 443/tcp
-
 
 ## Installation using Nodejs, Mariadb and Apache
 
@@ -83,6 +82,22 @@ BubbleDNS is a self-hosted Dynamic DNS (DDNS) service similar to DynDNS or NO-IP
     The internal Webserver should be available under https://127.0.0.1:12512 from the localhost. <br />
     You can add an Apache Reverse Proxy (an example is under `InstallData/apacheconfig.conf`) to make it available under Port 80 & 443.<br />
     You can also directly access the internal Webserver by changing the config file : `webserver.hostname = "0.0.0.0"`, but I would recommend generating a new ssl certificate!<br />
+
+9. **Using Apache/Nginx as a reverse proxy**<br />
+An example of an apache config is in InstallData/apacheconfig.conf
+
+## Installation using Docker
+
+* You need to have the following files in the same directory
+    * Dockerfile (can be found under InstallData\Dockerfiles)
+    * docker-compose.yml (can be found under InstallData\Dockerfiles)
+    * db.sql (can be found under the root folder of BubbleDNS)
+    * config.json (can be found under the root folder of BubbleDNS)
+   
+After configuring the files as you like you can build the container. The config.json gets updated after each restart, so don't delete it.<br />
+You still should use Apache/Nginx as a reverse proxy.
+
+
 
 ## Configuration 
 
